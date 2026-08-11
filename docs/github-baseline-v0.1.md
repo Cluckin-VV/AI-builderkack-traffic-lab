@@ -4,10 +4,10 @@
 - App version: 0.3.0
 - Command Protocol: 0.3
 - SceneAction Protocol: 0.1
-- Git commit SHA: to be filled after the baseline commit
-- Tests: 74 expected
-- Test result: pending final verification
-- Source fingerprint: reported by `/health`
+- Git commit SHA: `f8e8d260d95f6db7d5df20b5eb130786a087a7b2`
+- Tests: 74
+- Test result: `Ran 74 tests — OK`
+- Source fingerprint: `548a524eddcf`
 - Repository: https://github.com/Cluckin-VV/ai-builder-traffic-lab
 
 ## Scope
