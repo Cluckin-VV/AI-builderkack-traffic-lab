@@ -5,6 +5,63 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+SCENE_ACTION_PROTOCOL_VERSION = "0.2"
+SCENE_ACTION_TYPES = {"add_bus", "remove_bus", "set_traffic_light", "stop_bus", "move_bus"}
+
+
+@dataclass(frozen=True)
+class ValidationError:
+    code: str
+    message: str
+    field: str = ""
+
+    def as_dict(self) -> Dict[str, str]:
+        return {"code": self.code, "message": self.message, "field": self.field}
+
+
+def validate_scene_action_schema(payload: Any) -> List[ValidationError]:
+    """Validate the v0.2 envelope only; no SceneState is read or changed."""
+    if not isinstance(payload, dict):
+        return [ValidationError("INVALID_TYPE", "SceneAction must be an object")]
+    errors: List[ValidationError] = []
+    required = {"protocol_version", "action_id", "action_type", "parameters"}
+    for field in sorted(required - set(payload)):
+        errors.append(ValidationError("MISSING_FIELD", f"Missing field: {field}", field))
+    for field in sorted(set(payload) - required - {"source", "metadata"}):
+        errors.append(ValidationError("UNKNOWN_FIELD", f"Unknown field: {field}", field))
+    if payload.get("protocol_version") != SCENE_ACTION_PROTOCOL_VERSION:
+        errors.append(ValidationError("UNSUPPORTED_PROTOCOL_VERSION", "Only protocol 0.2 is supported", "protocol_version"))
+    if "action_id" in payload and (not isinstance(payload["action_id"], str) or not payload["action_id"]):
+        errors.append(ValidationError("INVALID_TYPE", "action_id must be a non-empty string", "action_id"))
+    if "action_type" in payload and payload["action_type"] not in SCENE_ACTION_TYPES:
+        errors.append(ValidationError("UNKNOWN_ACTION_TYPE", "Unsupported action type", "action_type"))
+    if "parameters" in payload and not isinstance(payload["parameters"], dict):
+        errors.append(ValidationError("INVALID_TYPE", "parameters must be an object", "parameters"))
+    if "metadata" in payload and not isinstance(payload["metadata"], dict):
+        errors.append(ValidationError("INVALID_TYPE", "metadata must be an object", "metadata"))
+    if isinstance(payload.get("metadata"), dict) and "confidence" in payload["metadata"]:
+        value = payload["metadata"]["confidence"]
+        if not isinstance(value, (int, float)) or not 0 <= value <= 1:
+            errors.append(ValidationError("INVALID_PARAMETER", "confidence must be between 0 and 1", "metadata.confidence"))
+    wanted = {"color"} if payload.get("action_type") == "set_traffic_light" else set()
+    if isinstance(payload.get("parameters"), dict):
+        for field in sorted(set(payload["parameters"]) - wanted):
+            errors.append(ValidationError("UNKNOWN_FIELD", "Unknown parameter", f"parameters.{field}"))
+        for field in sorted(wanted - set(payload["parameters"])):
+            errors.append(ValidationError("MISSING_FIELD", "Missing parameter", f"parameters.{field}"))
+        if "color" in payload["parameters"] and payload.get("action_type") == "set_traffic_light" and payload["parameters"]["color"] not in {"红灯", "黄灯", "绿灯"}:
+            errors.append(ValidationError("INVALID_ENUM", "Unsupported traffic light color", "parameters.color"))
+    return errors
+
+
+def validate_scene_action_semantics(action: "SceneAction", state: "SceneState") -> List[ValidationError]:
+    """Validate whether an otherwise well-shaped action can execute now."""
+    if action.action_type in {"remove_bus", "stop_bus", "move_bus"} and state.buses == 0:
+        return [ValidationError("SEMANTIC_TARGET_NOT_FOUND", "No bus exists in the scene", "target")]
+    if action.action_type == "stop_bus" and state.bus_running is False:
+        return [ValidationError("SEMANTIC_INVALID_STATE_TRANSITION", "Bus is already stopped", "action_type")]
+    return []
+
 
 @dataclass
 class SceneState:

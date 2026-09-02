@@ -1,47 +1,103 @@
-# AI Builder Traffic Lab
+# TransitLab — Guardrailed AI World Builder
 
-A browser-based AI traffic-scene prototype exploring natural-language-to-action workflows for interactive smart transportation environments.
-
-## What this is
-
-This repository contains the reproducible v0.3.0 baseline of the AI Builder traffic-scene prototype. It is not the final Kaggle Hackathon submission.
-
-Execution chain:
+TransitLab turns plain-language traffic instructions into validated scene actions and a live browser-native 3D world.
 
 ```text
-Browser
-→ ModelAdapter / Compiler
-→ SceneAction
-→ Validator
-→ State.apply
-→ Renderer
-→ Event Log
+User prompt
+→ ModelAdapter candidate
+→ SceneAction Protocol v0.2
+→ Schema validation
+→ Semantic validation
+→ SceneState.apply
+→ Three.js renderer
+→ Explainable Event Log
 ```
 
-Current versions: App `v0.3.0`, Command Protocol `v0.3`, SceneAction Protocol `v0.1`.
+The differentiator is not merely prompt-to-3D. The interface makes the safety boundary visible: invalid, ambiguous, or impossible actions are rejected before they can mutate the scene.
 
-The prototype provides deterministic command parsing, a versioned SceneAction protocol, safe rejection of unknown and invalid actions, browser scene updates, Event Log tracing, Runtime Identity, `/health`, evaluation cases, and standard-library tests.
+## Current prototype
 
-## Run
+Version `0.4.0` is a hackathon-preparation prototype:
 
-From the repository root:
+- real WebGL 3D district rendered with Three.js;
+- procedural buses, roads, signals, streetlights, trees, and buildings;
+- mouse/touch camera orbit, wheel zoom, reset, and visual pause;
+- six scene actions through a versioned protocol;
+- visible Candidate → Schema → Semantic → Execution trace;
+- read-only scene inspector and raw Event Log;
+- deterministic browser path plus a real-LLM shadow evaluation path;
+- runtime fingerprint and `/health` identity check;
+- Python standard-library server and test suite.
+
+![TransitLab v0.4 WebGL world builder](docs/transitlab-v04-showcase.png)
+
+The browser execution path still uses `FakeModelAdapter`. The real LLM remains shadow-only and cannot call `SceneState.apply`. This is intentional until evaluation evidence supports promotion.
+
+## Run locally
+
+Python 3.11+ is recommended.
 
 ```powershell
+cd "D:\ai-builder-traffic-lab"
 python -m unittest discover -s ai_builder/tests -v
 python -m ai_builder.server
 ```
 
-Open `http://127.0.0.1:8000` for the browser demo and `http://127.0.0.1:8000/health` for runtime identity.
+Open:
 
-## Limits
+- Demo: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- Runtime identity: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+- Render state: [http://127.0.0.1:8000/api/state](http://127.0.0.1:8000/api/state)
 
-- No real LLM is connected; model adapters are fake or shadow-only.
-- No FastAPI, Redis, PostgreSQL, LangGraph, RAG, external API, or database is used.
-- The system validates a deterministic action pipeline; it is not a complete traffic simulator.
-- The browser renderer is a minimal Canvas perspective scene.
+The WebGL renderer loads the pinned Three.js module from jsDelivr, so the first browser load requires internet access.
 
-## Roadmap
+## Supported instructions
 
-Runtime verification → SceneAction protocol → LLM adapter → evaluation → agent workflow → deployment
+Try:
 
-See `docs/github-baseline-v0.1.md` for the baseline verification record.
+- `增加一辆公交车`
+- `删除一辆公交车`
+- `把信号灯改成红色`
+- `把红灯变回绿色`
+- `让公交车停下`
+- `让公交车继续行驶`
+
+Unsupported or combined requests are rejected without changing state, for example:
+
+- `让天气下暴雪`
+- `增加公交车并把灯变红`
+- `让公交车在红灯前停下`
+
+## Architecture boundary
+
+`scene3d.js` is a renderer. It receives scene data and controls only camera and visual animation. It does not parse commands, create `SceneAction`, run validation, or write server state.
+
+The only browser mutation route is:
+
+```text
+POST /command
+→ injected ModelAdapter
+→ JSON
+→ schema validator
+→ semantic validator
+→ SceneState.apply (accepted only)
+```
+
+## Hackathon status
+
+This repository is preparing for the AI Builder Hackathon 2026. It is not yet a compliant final submission: the hosted demo, sub-three-minute video, submission writeup, and final public-repository synchronization are still outstanding.
+
+See [docs/hackathon-prototype-v0.4.md](docs/hackathon-prototype-v0.4.md) for the rules-fit audit and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency provenance.
+
+## Known limits
+
+- deterministic commands do not yet generalize to arbitrary natural language;
+- the real LLM path is evaluation-only;
+- state and Event Log are process-local and reset when the server restarts;
+- vehicles follow visual loops rather than traffic physics or path planning;
+- the demo depends on a CDN-hosted Three.js module;
+- no hosted public demo has been configured.
+
+## License and provenance
+
+All scene geometry is generated in project code; no external 3D assets are used. Three.js is used under the MIT License. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

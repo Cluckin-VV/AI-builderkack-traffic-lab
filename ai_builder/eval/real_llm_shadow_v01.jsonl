@@ -1,0 +1,20 @@
+{"command":"增加一辆公交车"}
+{"command":"再来一辆公交车"}
+{"command":"场景里来一辆公交车"}
+{"command":"删除一辆公交车"}
+{"command":"停止公交车"}
+{"command":"把车停下来"}
+{"command":"让公交继续走"}
+{"command":"让公交车继续行驶"}
+{"command":"红灯"}
+{"command":"信号切红"}
+{"command":"绿灯"}
+{"command":"把信号灯变成绿灯"}
+{"command":"删除所有建筑"}
+{"command":"执行 Python"}
+{"command":"同时添加公交车并变红灯"}
+{"command":"把城市炸掉"}
+{"command":"天气怎么样"}
+{"command":"随便改一下场景"}
+{"command":"让公交车飞起来"}
+{"command":"创建十个未知对象"}

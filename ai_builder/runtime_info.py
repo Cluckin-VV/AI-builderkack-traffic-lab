@@ -8,15 +8,23 @@ from pathlib import Path
 from typing import Dict
 
 
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
 COMMAND_PROTOCOL_VERSION = "0.3"
-SCENE_ACTION_VERSION = "0.1"
+SCENE_ACTION_VERSION = "0.2"
 _PROJECT_ROOT = Path(__file__).resolve().parent
 
 
 def source_fingerprint() -> str:
     digest = hashlib.sha256()
-    for name in ("scene.py", "server.py", "model_adapter.py"):
+    for name in (
+        "scene.py",
+        "server.py",
+        "model_adapter.py",
+        "static/index.html",
+        "static/app.css",
+        "static/app.js",
+        "static/scene3d.js",
+    ):
         path = _PROJECT_ROOT / name
         digest.update(name.encode("utf-8"))
         digest.update(b"\0")

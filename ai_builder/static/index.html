@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07110f">
+  <meta name="description" content="用受约束的自然语言动作协议，在浏览器中安全构建交互式 3D 交通场景。">
+  <meta name="build-fingerprint" content="{{source_fingerprint}}">
+  <title>TransitLab · Guardrailed AI World Builder</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307110f'/%3E%3Cpath d='M7 24V14h5v10zm7 0V6h5v18zm7 0V10h5v14z' fill='%2347d7ac'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/assets/app.css?v={{source_fingerprint}}">
+  <script type="module" src="/assets/app.js?v={{source_fingerprint}}"></script>
+</head>
+<body>
+  <a class="skip-link" href="#prompt">跳到场景指令</a>
+
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="TransitLab 首页">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>
+        <strong>TRANSITLAB</strong>
+        <small>GUARDRAILED WORLD BUILDER</small>
+      </span>
+    </a>
+    <div class="runtime-strip" aria-label="运行版本">
+      <span>App v{{app_version}}</span>
+      <span>Command Protocol v{{command_protocol_version}}</span>
+      <span>SceneAction v{{scene_action_version}}</span>
+      <span class="runtime-identity">Build <b>{{source_fingerprint}}</b></span>
+    </div>
+    <a class="health-link" href="/health" target="_blank" rel="noreferrer">
+      <span class="live-dot" aria-hidden="true"></span>
+      Runtime live
+    </a>
+  </header>
+
+  <main class="workspace">
+    <section class="control-rail" aria-labelledby="director-title">
+      <div class="section-kicker">AI SCENE DIRECTOR · BASELINE MODE</div>
+      <h1 id="director-title">说出变化，<br><em>让世界响应。</em></h1>
+      <p class="intro">候选动作必须依次通过 Schema 与场景语义验证，才有资格触碰 3D 世界。</p>
+
+      <form id="command-form" class="command-form">
+        <label for="prompt">你想改变什么？</label>
+        <div class="prompt-shell">
+          <textarea id="prompt" name="command" rows="3" maxlength="240" autocomplete="off"
+            placeholder="例如：场景里来一辆公交车"></textarea>
+          <div class="prompt-meta">
+            <span id="character-count">0 / 240</span>
+            <kbd>Ctrl</kbd><span>+</span><kbd>Enter</kbd>
+          </div>
+        </div>
+        <button id="submit-command" class="primary-action" type="submit">
+          <span>构建场景</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+
+      <div class="examples">
+        <div class="examples-heading">
+          <h2>试试这些指令</h2>
+          <span>单动作协议</span>
+        </div>
+        <div class="prompt-list">
+          <button type="button" data-command="增加一辆公交车"><b>01</b><span>增加一辆公交车</span><i>ADD</i></button>
+          <button type="button" data-command="把信号灯改成红色"><b>02</b><span>把信号灯改成红色</span><i>LIGHT</i></button>
+          <button type="button" data-command="让公交车停下"><b>03</b><span>让公交车停下</span><i>STOP</i></button>
+          <button type="button" data-command="让公交车继续行驶"><b>04</b><span>让公交车继续行驶</span><i>MOVE</i></button>
+          <button type="button" data-command="删除一辆公交车"><b>05</b><span>删除一辆公交车</span><i>REMOVE</i></button>
+          <button class="boundary-prompt" type="button" data-command="让天气下暴雪"><b>06</b><span>让天气下暴雪</span><i>BOUNDARY</i></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="stage" aria-labelledby="viewport-title">
+      <header class="stage-header">
+        <div>
+          <span class="eyebrow">LIVE WEBGL WORLD</span>
+          <h2 id="viewport-title">NEXUS DISTRICT <small>/ 交通数字孪生</small></h2>
+        </div>
+        <div class="stage-actions" aria-label="3D 场景控制">
+          <button id="toggle-motion" type="button" aria-pressed="false" title="暂停或继续视觉动画">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+            <span>暂停动画</span>
+          </button>
+          <button id="reset-camera" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"/></svg>
+            <span>重置镜头</span>
+          </button>
+        </div>
+      </header>
+
+      <div id="viewport" class="viewport" tabindex="0" aria-label="可交互 3D 交通场景。拖动旋转，滚轮缩放。">
+        <div id="scene-root" class="scene-root"></div>
+        <div id="webgl-fallback" class="webgl-fallback" hidden>
+          <strong>无法启动 WebGL 场景</strong>
+          <span>请启用浏览器硬件加速后刷新页面。</span>
+        </div>
+        <div class="viewport-vignette" aria-hidden="true"></div>
+        <div class="scene-status">
+          <span class="coordinate">SECTOR 31.2304° N · 121.4737° E</span>
+          <span class="camera-help">拖动旋转 · 滚轮缩放</span>
+        </div>
+        <div class="scene-telemetry" aria-label="场景实时状态">
+          <div><span>公交车</span><strong id="bus-count">0</strong></div>
+          <div><span>运行状态</span><strong id="motion-state">等待车辆</strong></div>
+          <div><span>信号灯</span><strong id="light-state">绿灯</strong></div>
+        </div>
+        <div id="command-status" class="command-status is-ready" role="status" aria-live="polite">
+          <span class="status-symbol" aria-hidden="true">●</span>
+          <span id="status-text">系统就绪，等待指令</span>
+        </div>
+      </div>
+
+      <ol id="pipeline" class="pipeline" aria-label="动作验证流水线">
+        <li data-stage="candidate"><span>01</span><div><b>Candidate</b><small>ModelAdapter</small></div><i></i></li>
+        <li data-stage="schema"><span>02</span><div><b>Schema</b><small>Protocol v0.2</small></div><i></i></li>
+        <li data-stage="semantic"><span>03</span><div><b>Semantic</b><small>Scene rules</small></div><i></i></li>
+        <li data-stage="execution"><span>04</span><div><b>Execution</b><small>State.apply</small></div><i></i></li>
+      </ol>
+    </section>
+
+    <aside class="inspector" aria-labelledby="inspector-title">
+      <header class="inspector-header">
+        <div>
+          <span class="eyebrow">TRACE INSPECTOR</span>
+          <h2 id="inspector-title">发生了什么</h2>
+        </div>
+        <span id="result-badge" class="result-badge neutral">READY</span>
+      </header>
+
+      <section class="state-panel" aria-labelledby="state-title">
+        <div class="panel-heading">
+          <h3 id="state-title">SceneState</h3>
+          <span>READ ONLY VIEW</span>
+        </div>
+        <dl>
+          <div><dt>bus_count</dt><dd id="state-buses">0</dd></div>
+          <div><dt>bus_running</dt><dd id="state-running">true</dd></div>
+          <div><dt>traffic_light</dt><dd id="state-light">绿灯</dd></div>
+        </dl>
+      </section>
+
+      <section class="action-panel" aria-labelledby="action-title">
+        <div class="panel-heading">
+          <h3 id="action-title">SceneAction</h3>
+          <span id="action-protocol">v0.2</span>
+        </div>
+        <div id="empty-action" class="empty-action">
+          <span aria-hidden="true">⌁</span>
+          <p>执行一条指令后，这里会显示候选动作及验证结果。</p>
+        </div>
+        <dl id="action-details" class="action-details" hidden>
+          <div><dt>action_type</dt><dd id="action-type">—</dd></div>
+          <div><dt>validation_stage</dt><dd id="validation-stage">—</dd></div>
+          <div><dt>action_id</dt><dd id="action-id">—</dd></div>
+        </dl>
+        <p id="explanation" class="explanation">场景只会响应经过双层验证的单一动作。</p>
+      </section>
+
+      <section class="history-panel" aria-labelledby="history-title">
+        <div class="panel-heading">
+          <h3 id="history-title">Recent events</h3>
+          <span id="history-count">0 EVENTS</span>
+        </div>
+        <ol id="event-history" class="event-history">
+          <li class="history-empty">尚无事件记录</li>
+        </ol>
+      </section>
+
+      <details class="raw-event">
+        <summary>查看原始 Event Log <span>JSON</span></summary>
+        <pre id="event-json">尚未执行指令</pre>
+      </details>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <span>Deterministic baseline · Real LLM remains shadow-only</span>
+    <span>Three.js r180 · MIT License · Procedural assets</span>
+    <span>Started At {{started_at}}</span>
+  </footer>
+</body>
+</html>
