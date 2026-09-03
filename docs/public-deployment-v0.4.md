@@ -34,9 +34,11 @@ The normal browser path remains deterministic. Real LLM evaluation is not enable
 2. Open the Render Blueprint URL:
    `https://dashboard.render.com/blueprint/new?repo=https://github.com/Cluckin-VV/AI-builderkack-traffic-lab`
 3. Connect the GitHub repository if Render requests authorization.
-4. Verify that the Blueprint creates exactly one free Python web service and no datastore.
-5. Apply the Blueprint and wait for the deploy status to become `live`.
-6. Record the assigned `https://*.onrender.com` URL in the README and Kaggle draft only after verification.
+4. Confirm the Blueprint uses the free plan and does not set
+   `maxShutdownDelaySeconds`, which Render does not support for free services.
+5. Verify that the Blueprint creates exactly one free Python web service and no datastore.
+6. Apply the Blueprint and wait for the deploy status to become `live`.
+7. Record the assigned `https://*.onrender.com` URL in the README and Kaggle draft only after verification.
 
 Do not add `OPENAI_API_KEY` to this service. A later real-model experiment must use a separate, explicitly reviewed deployment configuration.
 

@@ -31,6 +31,7 @@ class DeploymentConfigTests(unittest.TestCase):
         self.assertIn("startCommand: python -m ai_builder.server", blueprint)
         self.assertIn("healthCheckPath: /health", blueprint)
         self.assertIn('autoDeployTrigger: "off"', blueprint)
+        self.assertNotIn("maxShutdownDelaySeconds", blueprint)
         self.assertNotIn("OPENAI_API_KEY", blueprint)
 
     def test_python_runtime_is_pinned(self):
