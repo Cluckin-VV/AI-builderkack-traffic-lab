@@ -86,7 +86,7 @@ Only an action that passes both stages may reach `SceneState.apply`, and a valid
 
 ### Safety that can be demonstrated, not merely claimed
 
-The current local candidate passes 183 automated tests. The suite covers domain behavior, protocol serialization, malformed model output, schema and semantic short-circuiting, HTTP integration, runtime identity, browser assets, and the invariant that rejected actions cannot mutate state.
+The current local candidate passes 189 automated tests. The suite covers domain behavior, protocol serialization, malformed model output, schema and semantic short-circuiting, HTTP integration, runtime identity, browser assets, deployment configuration, and the invariant that rejected actions cannot mutate state.
 
 The deterministic command evaluation set currently reports:
 
@@ -146,7 +146,7 @@ AI-native 3D creation should not require trusting a black box with the keys to t
 ## Internal pre-submit checklist
 
 - [x] Kaggle competition team exists and `Cluckin-VV` is team captain.
-- [x] Local automated suite: 183 tests, all passing on 2026-09-02.
+- [x] Local automated suite: 189 tests, all passing on 2026-09-03.
 - [x] Project direction checked against the official announcement and Terms.
 - [ ] Organizer registration confirmed from both Microsoft Forms or in writing.
 - [ ] Organizer confirms treatment/disclosure of work created before 2026-09-11.

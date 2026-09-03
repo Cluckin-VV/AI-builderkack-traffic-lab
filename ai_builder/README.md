@@ -17,6 +17,8 @@ python -m ai_builder.server
 
 Open `http://127.0.0.1:8000`.
 
+For a cloud runtime, set `PORT`; the module then binds to `0.0.0.0:$PORT`. Local execution without `PORT` remains restricted to `127.0.0.1:8000`. The repository-level `render.yaml` runs this same module and uses `/health` for deployment checks.
+
 ## Browser execution chain
 
 ```text
@@ -59,3 +61,4 @@ The normal browser path uses a deterministic adapter. Real LLM support is shadow
 - process-local state is not persistent;
 - vehicle motion is visual, not a traffic simulation;
 - Three.js is loaded from a pinned jsDelivr URL on first page load.
+- one running server process exposes one shared, ephemeral scene to all visitors.

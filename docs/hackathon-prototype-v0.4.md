@@ -1,6 +1,6 @@
 # TransitLab Hackathon Prototype v0.4
 
-Status: implementation candidate, not a final submission  
+Status: implementation candidate, not a final submission
 Verified against official pages: 2026-08-23
 
 ## Product thesis
@@ -24,7 +24,7 @@ Sources:
 | Runs in a browser | Standard-library HTTP host plus WebGL UI | Implemented locally |
 | Plain language to 3D scenes and working logic | Prompt → SceneAction → validators → state → Three.js | Implemented for six action classes |
 | Public code repository | `Cluckin-VV/AI-builderkack-traffic-lab` exists | Current local v0.4 changes not yet synchronized |
-| Hosted browser demo | Localhost only | Missing |
+| Hosted browser demo | Render Blueprint, cloud port binding, and health check prepared | Deployment pending |
 | Demo video under three minutes | No final recording | Missing |
 | Short written description | Product thesis and README | Draft |
 | Selected focus category | AI 3D Scene Generation | Proposed |
@@ -118,14 +118,15 @@ Until answered, v0.4 should be described as preparation, not a compliant final e
 - [x] Pipeline stage colors match the Event Log stage.
 - [x] `/health`, page build, and Event Log fingerprint agree.
 - [x] Layout remains usable without horizontal overflow at 320, 390, 768, 1024, and 1440 pixels.
-- [ ] Hosted demo can cold-start without local files or secrets.
+- [x] Hosted build can start without local files, databases, or secrets.
+- [ ] Hosted URL has been created and verified from a clean browser profile.
 
 ## Remaining work before submission
 
 1. Confirm pre-build eligibility and registration status.
 2. Promote a real LLM only after a larger shadow evaluation proves safe behavior.
 3. Add judge-prompt coverage beyond exact aliases.
-4. Deploy a public demo with uptime monitoring and a CDN fallback strategy.
+4. Apply the prepared Render Blueprint, verify the public URL, and decide whether a CDN fallback is required.
 5. Record the sub-three-minute demo from the deployed build.
 6. Prepare the Kaggle writeup and final repository disclosure.
 7. Freeze a tagged submission commit and verify all links from a clean browser profile.

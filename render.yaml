@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ai-builderkack-traffic-lab
+    runtime: python
+    plan: free
+    branch: main
+    autoDeployTrigger: "off"
+    buildCommand: python -m compileall -q ai_builder && python -m unittest discover -s ai_builder/tests -v
+    startCommand: python -m ai_builder.server
+    healthCheckPath: /health
+    maxShutdownDelaySeconds: 10

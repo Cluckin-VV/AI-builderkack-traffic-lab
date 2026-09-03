@@ -1,11 +1,12 @@
 """Standard-library HTTP host for the browser-native AI Builder demo."""
 
 import json
+import os
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
-from typing import Any, Dict
+from typing import Any, Dict, Mapping, Optional, Tuple
 from urllib.parse import urlsplit
 
 from ai_builder.model_adapter import FakeModelAdapter, ModelAdapter, run_model_command
@@ -118,12 +119,38 @@ class SceneHandler(BaseHTTPRequestHandler):
         return
 
 
+def resolve_bind_address(environ: Optional[Mapping[str, str]] = None) -> Tuple[str, int]:
+    """Resolve a local-safe address or Render's public ``0.0.0.0:$PORT`` contract."""
+    values = os.environ if environ is None else environ
+    render_port = values.get("PORT")
+    raw_port = render_port or values.get("AI_BUILDER_PORT", "8000")
+    try:
+        port = int(raw_port)
+    except (TypeError, ValueError) as error:
+        raise ValueError("server port must be an integer between 1 and 65535") from error
+    if not 1 <= port <= 65535:
+        raise ValueError("server port must be an integer between 1 and 65535")
+    host = values.get("AI_BUILDER_HOST") or ("0.0.0.0" if render_port else "127.0.0.1")
+    return host, port
+
+
 def run(host: str = "127.0.0.1", port: int = 8000) -> None:
     server = ThreadingHTTPServer((host, port), SceneHandler)
     print(f"AI Builder Traffic Lab: http://{host}:{port}")
     print(f"Runtime fingerprint: {get_runtime_identity().source_fingerprint}")
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
+
+
+def main() -> None:
+    host, port = resolve_bind_address()
+    try:
+        run(host, port)
+    except KeyboardInterrupt:
+        print("\nAI Builder Traffic Lab stopped.")
 
 
 if __name__ == "__main__":
-    run()
+    main()
