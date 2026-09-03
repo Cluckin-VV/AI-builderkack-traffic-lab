@@ -45,19 +45,20 @@ python -m ai_builder.server
 
 Open:
 
+- Public demo: [https://ai-builderkack-traffic-lab.onrender.com](https://ai-builderkack-traffic-lab.onrender.com)
 - Demo: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 - Runtime identity: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 - Render state: [http://127.0.0.1:8000/api/state](http://127.0.0.1:8000/api/state)
 
 The WebGL renderer loads the pinned Three.js module from jsDelivr, so the first browser load requires internet access.
 
-## Public deployment preparation
+## Public deployment
 
 The repository includes a reproducible Render Blueprint in [`render.yaml`](render.yaml). It defines one free Python web service, runs the complete test suite during the build, starts the standard-library HTTP server, and checks `GET /health`. Automatic deployment is deliberately disabled so a documentation-only commit cannot silently replace the judged demo.
 
 The server keeps loopback defaults locally and automatically binds to `0.0.0.0:$PORT` when Render supplies `PORT`. No database, Redis instance, Docker image, or API key is required for the deterministic public demo.
 
-Deployment is prepared but not yet live. After the v0.4 commit is available on GitHub, open the [Render Blueprint](https://dashboard.render.com/blueprint/new?repo=https://github.com/Cluckin-VV/AI-builderkack-traffic-lab), review the single service, and apply it. The complete verification and rollback procedure is in [`docs/public-deployment-v0.4.md`](docs/public-deployment-v0.4.md).
+The deterministic demo is live at [ai-builderkack-traffic-lab.onrender.com](https://ai-builderkack-traffic-lab.onrender.com). The deployment was verified on 2026-09-04 against commit `fbd8c05`: runtime identity, accepted scene changes, safe rejection, Event Log fingerprinting, WebGL rendering, and the browser console all passed. The complete evidence and rollback procedure is in [`docs/public-deployment-v0.4.md`](docs/public-deployment-v0.4.md).
 
 ## Supported instructions
 
@@ -93,7 +94,7 @@ POST /command
 
 ## Hackathon status
 
-This repository is preparing for the AI Builder Hackathon 2026. Kaggle participation is confirmed and the submission writeup is saved as a draft. It is not yet a final submission: the hosted demo, sub-three-minute video, and final public-repository synchronization are still outstanding.
+This repository is preparing for the AI Builder Hackathon 2026. Kaggle participation is confirmed, the public repository is synchronized, the browser demo is live, and the submission writeup is saved as a draft. It is not yet a final submission: the sub-three-minute video and final submission verification are still outstanding.
 
 See [docs/hackathon-prototype-v0.4.md](docs/hackathon-prototype-v0.4.md) for the rules-fit audit and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency provenance.
 
@@ -104,7 +105,7 @@ See [docs/hackathon-prototype-v0.4.md](docs/hackathon-prototype-v0.4.md) for the
 - state and Event Log are process-local and reset when the server restarts;
 - vehicles follow visual loops rather than traffic physics or path planning;
 - the demo depends on a CDN-hosted Three.js module;
-- the Render deployment is configured but no hosted public URL has been created yet;
+- the free Render instance may cold-start after inactivity;
 - all visitors to one server instance share process-local demo state.
 
 ## License and provenance

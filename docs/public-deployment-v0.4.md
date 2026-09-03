@@ -1,6 +1,10 @@
 # TransitLab public deployment v0.4
 
-Status: prepared, not deployed
+Status: live and verified on 2026-09-04
+
+Public URL: https://ai-builderkack-traffic-lab.onrender.com
+
+Verified deployment commit: `fbd8c0519b0b1c111f26c93eba497b8b3f260814`
 
 ## Deployment contract
 
@@ -28,7 +32,34 @@ The normal browser path remains deterministic. Real LLM evaluation is not enable
 
 `server.resolve_bind_address` preserves `127.0.0.1:8000` for local use. When the platform supplies `PORT`, the service binds to `0.0.0.0:$PORT`.
 
-## First deployment
+## Verified deployment evidence
+
+Render created exactly one free Python web service from the Blueprint. The first successful deployment completed in 53.2 seconds and became `Live` without a database, worker, secret, or paid resource.
+
+`GET /health` returned:
+
+```json
+{
+  "app_version": "0.4.0",
+  "command_protocol_version": "0.3",
+  "scene_action_version": "0.2",
+  "started_at": "2026-09-04T00:49:38.616989+08:00",
+  "source_fingerprint": "724f4b4d539e",
+  "git_commit": "fbd8c05"
+}
+```
+
+Public acceptance evidence:
+
+- `增加一辆公交车`: accepted; `buses` changed from 0 to 1.
+- `把信号灯变成红灯`: accepted; `traffic_light` changed from `绿灯` to `红灯`.
+- `让天气下暴雪`: rejected with `unknown action_type`; before and after state snapshots were identical.
+- Every checked Event Log used runtime fingerprint `724f4b4d539e`, matching `/health`.
+- The browser UI loaded the Three.js/WebGL world and executed an additional add-bus command through the visible form.
+- Browser console warnings and errors: 0.
+- Full local regression suite before deployment: 189 tests, all passing.
+
+## Reproduce the deployment
 
 1. Confirm `main` and `origin/main` point to the intended v0.4 release commit.
 2. Open the Render Blueprint URL:

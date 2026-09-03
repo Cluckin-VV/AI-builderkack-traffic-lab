@@ -2,7 +2,7 @@
 
 > Internal status: **DRAFT — do not submit for judging yet.**
 >
-> Before final submission, synchronize the public repository with the verified local v0.4 build, deploy a public browser demo, add a demo video under three minutes, and replace all `Pending` links below.
+> The public repository and browser demo are live. Before final submission, add a demo video under three minutes, finish the remaining organizer and evaluation checks, and replace the final `Pending` link below.
 
 ## Kaggle fields
 
@@ -122,20 +122,18 @@ The renderer reads scene state but does not parse language, validate business ru
 
 ### What remains before the final submission
 
-TransitLab is currently a working local half-product, not a finished competition submission. Before judging, the project will add:
+TransitLab is a working public prototype, not yet a finished competition submission. Before judging, the project will add:
 
-1. a synchronized public repository containing the verified WebGL build;
-2. a hosted browser demo that remains available throughout judging;
-3. a sub-three-minute demo video;
-4. broader unknown-prompt and judge-prompt evaluation;
-5. a corrected real-LLM shadow baseline and evidence-based promotion decision;
-6. written clarification from the organizer about disclosure of pre-build work;
-7. a final clean-browser reproducibility check and tagged submission commit.
+1. a sub-three-minute demo video;
+2. broader unknown-prompt and judge-prompt evaluation;
+3. a corrected real-LLM shadow baseline and evidence-based promotion decision;
+4. written clarification from the organizer about disclosure of pre-build work;
+5. a final clean-browser reproducibility check and tagged submission commit.
 
 ### Links
 
 - Public repository: https://github.com/Cluckin-VV/AI-builderkack-traffic-lab
-- Hosted demo: **Pending**
+- Hosted demo: https://ai-builderkack-traffic-lab.onrender.com
 - Demo video: **Pending**
 - Third-party notices: included in the repository
 
@@ -146,12 +144,12 @@ AI-native 3D creation should not require trusting a black box with the keys to t
 ## Internal pre-submit checklist
 
 - [x] Kaggle competition team exists and `Cluckin-VV` is team captain.
-- [x] Local automated suite: 189 tests, all passing on 2026-09-03.
+- [x] Local automated suite: 189 tests, all passing on 2026-09-04.
 - [x] Project direction checked against the official announcement and Terms.
 - [ ] Organizer registration confirmed from both Microsoft Forms or in writing.
 - [ ] Organizer confirms treatment/disclosure of work created before 2026-09-11.
-- [ ] Local v0.4 changes committed and pushed to the public repository without force-push.
-- [ ] Hosted demo URL added and verified from a clean browser profile.
+- [x] Local v0.4 changes committed and pushed to the public repository without force-push.
+- [x] Hosted demo URL added and verified through public HTTP and a separate browser session.
 - [ ] Demo video under three minutes added.
 - [ ] Stale real-LLM result artifacts regenerated after diagnostics are corrected.
 - [ ] Kaggle page translation disabled before editing to avoid the observed `removeChild` crash.
