@@ -1,0 +1,59 @@
+1
+00:00:00,000 --> 00:00:08,000
+TRANSITLAB v0.5 | Live public browser capture. Deterministic adapter; real LLM is shadow-only.
+
+2
+00:00:08,000 --> 00:00:15,000
+"Add one bus." Each accepted command adds exactly one vehicle to the scene.
+
+3
+00:00:15,000 --> 00:00:24,000
+One candidate -> Schema -> Semantics -> Execution. The inspector exposes the action and state.
+
+4
+00:00:24,000 --> 00:00:34,000
+Four approaches in an orbitable Three.js world, with an original Blender-authored bus.
+
+5
+00:00:34,000 --> 00:00:46,000
+"Turn the signal red." EW stops; NS receives green after all-red intersection clearance.
+
+6
+00:00:46,000 --> 00:00:56,000
+"Stop the buses." Manual stopping is explicit state, separate from waiting at a red light.
+
+7
+00:00:56,000 --> 00:01:04,000
+"Let the buses continue." They resume only where the traffic controller grants right-of-way.
+
+8
+00:01:04,000 --> 00:01:14,000
+"Make it rain." Validated weather changes the rendering and a simplified speed policy.
+
+9
+00:01:14,000 --> 00:01:24,000
+"Make it snow heavily." Accepted as snow mode: snowfall, wintry lighting and reduced speed.
+
+10
+00:01:24,000 --> 00:01:36,000
+"Make it foggy." Visibility changes in the same interactive world, not a replacement image.
+
+11
+00:01:36,000 --> 00:01:41,000
+"Restore clear weather." Every accepted change remains visible in the action trace.
+
+12
+00:01:41,000 --> 00:01:49,000
+Animation paused for comparison. Now request an unsupported change: "Make meteors fall."
+
+13
+00:01:49,000 --> 00:01:54,000
+REJECTED at schema. The full before/after state is identical; nothing executes.
+
+14
+00:01:54,000 --> 00:02:02,000
+Event Log: original command, validation stage, rejection reason, state snapshots and build fingerprint.
+
+15
+00:02:02,000 --> 00:02:12,000
+Language proposes. Validators decide. The world responds. Real LLM execution remains disabled.

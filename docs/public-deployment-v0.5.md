@@ -1,6 +1,20 @@
 # TransitLab public deployment v0.5
 
-Status: **release candidate; public verification pending**
+Status: **deployed; public HTTP and isolated Chromium browser acceptance passed on 2026-09-14**
+
+## Verified public deployment
+
+The running service reports App `0.5.0`, Command Protocol `0.3`, SceneAction `0.2`, commit `038a9ef`, fingerprint `4c6d083172e4`, started at `2026-09-14T11:52:54.960267+08:00`.
+
+Public HTTP verification completed 12 commands: ten accepted at execution (add, stop, move, red, green, snow, rain, fog, clear, remove) and two rejected at schema (meteor and combined add/light). Both rejected events preserved complete state snapshots and included rejection reasons. All twelve Event Log fingerprints matched `/health`.
+
+Ten deployed assets returned HTTP 200 and matched local SHA-256 hashes: CSS, app, scene renderer, urban world, traffic controller, weather view, Reflector, bus JSON and both textures. The root page returned HTTP 200 with resolved App v0.5.0 identity. The test ended with the same scene configuration it began with: zero buses, running enabled, green signal and clear weather.
+
+The original browser-control bridge failed with `nodeRepl.fetch request failed`. An independent Playwright CLI browser subsequently verified the public URL: seven accepted commands, two schema rejections, authored bus asset ready, identical complete state snapshots and paused-canvas pixels for both rejections, and no horizontal overflow at 390 × 844. Desktop and full-page mobile screenshots were visually inspected. A separate warm-page reload and interaction check reported zero console warnings/errors and zero page errors.
+
+The first cold visit showed a Render loading page with HTTP 503 (plus favicon/HEAD errors). These are not silently excluded from the record: the zero-error result applies to the warmed application, not to every request since the first visit. A later idle restart reset process-local state; recording preparation reloaded the page and checked current state before creating demo vehicles.
+
+An additional public UI rehearsal accepted three individual bus additions (1 → 2 → 3 → 4), signal red, manual stop, resume, rain, snow, fog and clear. EW red / NS green was observed after clearance, and manual stop displayed four manually stopped vehicles. The meteor request was rejected at schema with identical state snapshots. No console/page errors occurred during that rehearsal.
 
 Public URL: https://ai-builderkack-traffic-lab.onrender.com
 
@@ -37,16 +51,16 @@ The final values are recorded only after a successful public check. A stale v0.4
 
 ## Public acceptance checklist
 
-- [ ] `/health` returns HTTP 200 and App `0.5.0`.
-- [ ] Root page renders the styled WebGL crossroads; it is not opened as a local `file://` document.
-- [ ] Browser console has no errors or warnings.
-- [ ] `增加一辆公交车` adds exactly one bus through the execution stage.
-- [ ] `把信号灯改成红色` changes the signal without cancelling a manual stop.
-- [ ] Four buses demonstrate both EW and NS approaches without conflicting green phases.
-- [ ] `让天气下暴雪` is accepted and visibly changes the scene.
-- [ ] `让天气下陨石` is rejected and leaves the complete state snapshot unchanged.
-- [ ] Event Log runtime fingerprint matches `/health`.
-- [ ] Desktop and 390 px layouts remain usable.
+- [x] `/health` returns HTTP 200 and App `0.5.0`.
+- [x] Root page renders the styled WebGL crossroads; it is not opened as a local `file://` document.
+- [x] Warm application console has no errors or warnings in the checked flows; cold-start exceptions are recorded above.
+- [x] `增加一辆公交车` adds exactly one bus through the execution stage.
+- [x] `把信号灯改成红色` changes the signal without cancelling a manual stop.
+- [x] Four buses demonstrate EW and NS approaches; observed phases are complementary. Exhaustive conflict prevention is covered by controller tests, not inferred from a short video.
+- [x] `让天气下暴雪` is accepted and visibly changes the scene.
+- [x] `让天气下陨石` is rejected and leaves the complete state snapshot unchanged.
+- [x] Event Log runtime fingerprint matches `/health`.
+- [x] Desktop and 390 px layouts remain usable.
 
 ## Local release-candidate evidence
 
@@ -58,7 +72,7 @@ Verified 2026-09-14 before commit and deployment:
 - Evaluation: legal 19/19, invalid/ambiguous 12/12, unsafe state mutations 0, Event Log omissions 0.
 - Real browser: 7 accepted commands and 2 safe rejections; authored bus asset ready; rejected canvas identical while visual animation was paused; mobile horizontal overflow false; page errors 0.
 
-The local health check was started before the candidate commit, so its Git field still showed base `98661c5`; the source fingerprint already covered the candidate files. The candidate was subsequently committed as `7f4e6ce` and synchronized to GitHub with an exact tree and commit SHA. The public section above remains unchecked until Render deploys that commit.
+The local health check was started before the candidate commit, so its Git field still showed base `98661c5`; the source fingerprint already covered the candidate files. The candidate was subsequently committed as `7f4e6ce` and synchronized to GitHub with an exact tree and commit SHA. Render deployed the later documentation commit `038a9ef` with the same business source fingerprint.
 
 ## Rollback
 

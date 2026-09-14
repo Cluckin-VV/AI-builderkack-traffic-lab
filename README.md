@@ -31,7 +31,9 @@ Version `0.5.0` is the competition release candidate:
 - runtime fingerprint and `/health` identity check;
 - Python standard-library server and test suite.
 
-![TransitLab v0.5 crossroads in the browser](docs/transitlab-crossroads-local.png)
+![TransitLab v0.5 public crossroads in snow](docs/transitlab-v05-public-snow.png)
+
+[Watch/download the 2:12 English-captioned demo](https://github.com/Cluckin-VV/AI-builderkack-traffic-lab/releases/download/v0.5.0-rc.1/transitlab-v05-demo-final.mp4) · [Release and verification details](https://github.com/Cluckin-VV/AI-builderkack-traffic-lab/releases/tag/v0.5.0-rc.1)
 
 ### Crossroads and city art
 
@@ -39,7 +41,7 @@ The v0.5 candidate adds an original editable Blender bus, AI-generated asphalt a
 
 ![Local city art candidate, captured in the browser](docs/transitlab-city-art-v1.png)
 
-The public Render deployment may lag this candidate until `/health` reports App `0.5.0`. See [asset provenance, reproduction and verification](docs/visual-city-upgrade-v0.1.md). This is a more detailed real-time art direction, not a claim of photorealism or traffic-simulation accuracy.
+The public Render deployment was verified on 2026-09-14 at App `0.5.0`, commit `038a9ef`, fingerprint `4c6d083172e4`. Public HTTP, WebGL interaction and mobile-layout checks passed; [deployment evidence and cold-start caveats](docs/public-deployment-v0.5.md) are recorded separately. See [asset provenance, reproduction and verification](docs/visual-city-upgrade-v0.1.md). This is a more detailed real-time art direction, not a claim of photorealism or traffic-simulation accuracy.
 
 The browser execution path still uses `FakeModelAdapter`. The real LLM remains shadow-only and cannot call `SceneState.apply`. This is intentional until evaluation evidence supports promotion.
 
@@ -68,7 +70,7 @@ The repository includes a reproducible Render Blueprint in [`render.yaml`](rende
 
 The server keeps loopback defaults locally and automatically binds to `0.0.0.0:$PORT` when Render supplies `PORT`. No database, Redis instance, Docker image, or API key is required for the deterministic public demo.
 
-The deterministic demo is live at [ai-builderkack-traffic-lab.onrender.com](https://ai-builderkack-traffic-lab.onrender.com). Check `/health` for the exact deployed version and fingerprint. The v0.4 deployment evidence and rollback procedure remain in [`docs/public-deployment-v0.4.md`](docs/public-deployment-v0.4.md); v0.5 evidence is recorded separately after deployment.
+The deterministic demo is live at [ai-builderkack-traffic-lab.onrender.com](https://ai-builderkack-traffic-lab.onrender.com). Check `/health` for the exact deployed version and fingerprint. The v0.4 deployment evidence and rollback procedure remain in [`docs/public-deployment-v0.4.md`](docs/public-deployment-v0.4.md); current acceptance is in [`docs/public-deployment-v0.5.md`](docs/public-deployment-v0.5.md).
 
 ## Supported instructions
 
@@ -113,7 +115,7 @@ POST /command
 
 ## Hackathon status
 
-This repository is preparing for the AI Builder Hackathon 2026. Kaggle participation is confirmed, the browser demo has a public URL, and the submission writeup is maintained as a draft. It is not yet a final submission: v0.5 deployment verification, the sub-three-minute video and final Kaggle submission are still outstanding.
+This repository is preparing for the AI Builder Hackathon 2026. Kaggle participation was previously recorded as confirmed, the v0.5 browser demo has passed public acceptance, and a 2:12 English-captioned public video is available in the `v0.5.0-rc.1` prerelease. The submission writeup remains a draft. Organizer eligibility/disclosure confirmation, Kaggle video-link compatibility and final Kaggle submission are still outstanding. Public deployment is not proof of completed competition submission.
 
 See [docs/hackathon-prototype-v0.4.md](docs/hackathon-prototype-v0.4.md) for the rules-fit audit and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency provenance.
 

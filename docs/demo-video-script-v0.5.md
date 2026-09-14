@@ -1,6 +1,20 @@
 # TransitLab v0.5 demo video script
 
-Status: **recording script; no finished video is claimed**. Target duration: 2:35.
+Status: **English-captioned video completed and publicly hosted on 2026-09-14**. Actual duration: **2:12**. The original storyboard below targeted 2:35; actual footage timing is recorded in the capture report.
+
+## Completed artifact
+
+- Final video: `output/playwright/transitlab-v05-demo-final.mp4` (H.264, 1600 × 1090, 25 fps, silent).
+- Original continuous public-page capture: `output/playwright/transitlab-v05-raw.webm` (1600 × 1000, 25 fps).
+- English captions: `docs/demo-video-en-v0.5.srt`.
+- Reproducible browser interactions: `tools/record-demo-v05.js`.
+- Encoder: `tools/encode-demo-v05.ps1` (run from repository root; requires local FFmpeg and Windows Arial).
+- No time compression, synthetic footage, private desktop capture or paid-model calls. A 90-pixel caption band is added below the complete browser content.
+- Full decode passed. One-frame-per-second contact sheets covering the entire export and full-size snow/Event Log frames were visually reviewed. This is sampled visual review, not a claim that every one of the 3,300 frames was individually inspected.
+- Browser recording assertions passed: ten accepted commands, one rejected command, unchanged rejected snapshots, zero console/page errors during recording. Four demo-owned buses were removed through normal validated commands afterward, returning to zero buses, green and clear.
+- [Public MP4](https://github.com/Cluckin-VV/AI-builderkack-traffic-lab/releases/download/v0.5.0-rc.1/transitlab-v05-demo-final.mp4): anonymous HTTP 200, exact size and SHA-256 verified. Final Kaggle submission is **not** completed by publishing this artifact.
+
+See [capture evidence](demo-video-capture-v0.5.md).
 
 ## Story
 

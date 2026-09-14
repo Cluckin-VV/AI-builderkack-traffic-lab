@@ -2,7 +2,7 @@
 
 > Internal status: **DRAFT — do not submit for judging yet.**
 >
-> The public repository and browser demo are live. Before final submission, deploy and verify v0.5, add a demo video under three minutes, and replace the final `Pending` link below.
+> The public repository, v0.5 browser demo and 2:12 English-captioned MP4 are live and independently verified on 2026-09-14. Before final submission, check Kaggle's video-link compatibility and resolve the eligibility/disclosure item below. This local draft is not proof that the online Writeup has been saved or submitted.
 
 ## Kaggle fields
 
@@ -127,16 +127,17 @@ The renderer reads scene state but does not parse language, validate business ru
 
 TransitLab is a working release candidate, not yet a finished competition submission. Before judging, the project must complete:
 
-1. a sub-three-minute demo video;
-2. a verified v0.5 public deployment and clean-browser check;
+1. confirm that Kaggle accepts/displays the public MP4 link (the 2:12 video is already published and anonymously downloadable);
+2. final public-link checks (v0.5 HTTP, clean-browser interaction and mobile acceptance already passed on 2026-09-14);
 3. broader unknown-prompt and judge-prompt evaluation;
-4. a tagged submission commit and final claim audit.
+4. a final claim audit and submission decision (`v0.5.0-rc.1` already pins the demonstrated source commit).
 
 ### Links
 
 - Public repository: https://github.com/Cluckin-VV/AI-builderkack-traffic-lab
 - Hosted demo: https://ai-builderkack-traffic-lab.onrender.com
-- Demo video: **Pending**
+- Demo video (2:12, English captions): https://github.com/Cluckin-VV/AI-builderkack-traffic-lab/releases/download/v0.5.0-rc.1/transitlab-v05-demo-final.mp4
+- Demonstrated source release: https://github.com/Cluckin-VV/AI-builderkack-traffic-lab/releases/tag/v0.5.0-rc.1
 - Third-party notices: included in the repository
 
 ### Closing thought
@@ -146,13 +147,14 @@ AI-native 3D creation should not require trusting a black box with the keys to t
 ## Internal pre-submit checklist
 
 - [x] Kaggle competition team exists and `Cluckin-VV` is team captain.
-- [x] Local automated suite: 209 Python tests and 8 JavaScript tests, all passing on 2026-09-13.
+- [x] Local automated suite: 209 Python tests and 8 JavaScript tests, all passing at release verification on 2026-09-14.
 - [x] Project direction checked against the official announcement and Terms.
 - [x] Organizer registration forms completed by the participant; no organizer confirmation email has been independently verified in this document.
 - [ ] Organizer confirms treatment/disclosure of work created before 2026-09-11.
 - [x] Local v0.5 release candidate committed and pushed to the public repository without force-push (`7f4e6ce`).
 - [x] Hosted demo URL added and verified through public HTTP and a separate browser session.
-- [ ] Demo video under three minutes added.
+- [x] Demo video under three minutes added to this local draft; anonymous MP4 download and SHA-256 verified on 2026-09-14.
+- [ ] Kaggle accepts/displays the GitHub Release MP4 link; online Writeup updated and saved.
 - [x] Offline shadow evaluator reports expected-valid acceptance and expected-invalid rejection separately with zero state mutation.
 - [ ] Kaggle page translation disabled before editing to avoid the observed `removeChild` crash.
 - [ ] Draft saved on Kaggle.
