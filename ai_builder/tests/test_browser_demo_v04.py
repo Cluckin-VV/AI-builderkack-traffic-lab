@@ -38,12 +38,17 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertIn("/assets/app.css?v=", page)
         self.assertIn("SceneAction v0.2", page)
         self.assertNotIn("getContext('2d')", page)
+        self.assertIn("NEXUS CROSSING", page)
+        self.assertIn("让天气下暴雪", page)
+        self.assertIn("让天气下陨石", page)
 
     def test_static_assets_have_explicit_content_types(self):
         expected = {
             "/assets/app.css": "text/css",
             "/assets/app.js": "text/javascript",
             "/assets/scene3d.js": "text/javascript",
+            "/assets/traffic-controller.mjs": "text/javascript",
+            "/assets/weather-view.js": "text/javascript",
         }
         for path, content_type in expected.items():
             with self.subTest(path=path):
@@ -60,6 +65,8 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertEqual(payload["scene"]["bus_count"], 0)
         self.assertTrue(payload["scene"]["bus_running"])
         self.assertEqual(payload["scene"]["projection"], "perspective")
+        self.assertEqual(payload["scene"]["road"]["layout"], "crossroads")
+        self.assertEqual(payload["scene"]["weather"], "clear")
         self.assertEqual(SceneHandler.state.snapshot(), before)
 
     def test_runtime_version_is_consistent_between_health_and_page(self):
@@ -67,7 +74,7 @@ class BrowserDemoV04Tests(unittest.TestCase):
         _, page_body = self.get("/")
         health = json.loads(health_body)
         page = page_body.decode("utf-8")
-        self.assertEqual(health["app_version"], "0.4.0")
+        self.assertEqual(health["app_version"], "0.5.0")
         self.assertEqual(health["scene_action_version"], "0.2")
         self.assertIn(f"App v{health['app_version']}", page)
         self.assertIn(f"Build <b>{health['source_fingerprint']}</b>", page)
@@ -101,6 +108,21 @@ class BrowserDemoV04Tests(unittest.TestCase):
         source = body.decode("utf-8")
         self.assertIn("three@0.180.0", source)
         self.assertNotIn("three@latest", source)
+
+    def test_renderer_delegates_motion_rules_to_traffic_controller(self):
+        _, body = self.get("/assets/scene3d.js")
+        source = body.decode("utf-8")
+        self.assertIn("TrafficController", source)
+        self.assertIn("traffic.advance", source)
+        self.assertNotIn("userData.phase +=", source)
+
+    def test_traffic_controller_is_browser_local_and_has_no_server_write(self):
+        _, body = self.get("/assets/traffic-controller.mjs")
+        source = body.decode("utf-8")
+        self.assertIn("red_light", source)
+        self.assertIn("manual_stop", source)
+        self.assertNotIn("fetch(", source)
+        self.assertNotIn("state.apply", source)
 
 
 if __name__ == "__main__":

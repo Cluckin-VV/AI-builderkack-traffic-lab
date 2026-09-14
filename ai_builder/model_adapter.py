@@ -89,7 +89,7 @@ def run_model_command(adapter: ModelAdapter, command: str, state: SceneState, ev
             validation = ValidationResult("rejected", legacy_reason, str(payload.get("action_id", "")) if isinstance(payload, dict) else "")
             error_code = error.code
         else:
-            target = {"set_traffic_light": "traffic_light", "add_bus": "road", "remove_bus": "road", "stop_bus": "bus", "move_bus": "bus"}[payload["action_type"]]
+            target = {"set_traffic_light": "traffic_light", "add_bus": "road", "remove_bus": "road", "stop_bus": "bus", "move_bus": "bus", "set_weather": "scene"}[payload["action_type"]]
             action = SceneAction(payload["action_type"], target, payload["parameters"], command, payload["action_id"], version="0.1")
             semantic_errors = validate_scene_action_semantics(action, state)
             stage = "semantic"

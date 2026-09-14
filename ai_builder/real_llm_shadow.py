@@ -6,8 +6,8 @@ from ai_builder.scene import SceneAction, SceneState, validate_scene_action_sche
 SYSTEM_INSTRUCTIONS = """You are a SceneAction compiler. Return exactly one SceneAction Protocol v0.2 JSON object. Never output code, explanations, multiple actions, unknown fields, or state mutations. Use only the supported action types. Unsupported requests must not invent an action."""
 ACTION_SCHEMA = {"type":"object","additionalProperties":False,"required":["protocol_version","action_id","action_type","parameters"],"properties":{
     "protocol_version":{"type":"string","const":"0.2"},"action_id":{"type":"string","minLength":1},
-    "action_type":{"type":"string","enum":["add_bus","remove_bus","set_traffic_light","stop_bus","move_bus"]},
-    "parameters":{"type":"object","additionalProperties":False,"properties":{"color":{"type":"string","enum":["红灯","黄灯","绿灯"]}}},
+    "action_type":{"type":"string","enum":["add_bus","remove_bus","set_traffic_light","stop_bus","move_bus","set_weather"]},
+    "parameters":{"type":"object","additionalProperties":False,"properties":{"color":{"type":"string","enum":["红灯","黄灯","绿灯"]},"weather":{"type":"string","enum":["clear","rain","snow","fog"]}}},
     "source":{"type":"string"},"metadata":{"type":"object"}}}
 
 class RealLLMAdapter:
@@ -70,7 +70,7 @@ def evaluate_candidate(command, candidate, state=None, reference=None, latency_m
     schema_errors=validate_scene_action_schema(candidate)
     if schema_errors: result["error_category"]="SCHEMA_FAILURE"; return result
     result["schema_valid"]=True
-    target={"add_bus":"road","remove_bus":"road","set_traffic_light":"traffic_light","stop_bus":"bus","move_bus":"bus"}[candidate["action_type"]]
+    target={"add_bus":"road","remove_bus":"road","set_traffic_light":"traffic_light","stop_bus":"bus","move_bus":"bus","set_weather":"scene"}[candidate["action_type"]]
     action=SceneAction(candidate["action_type"],target,candidate["parameters"],command,candidate["action_id"])
     if validate_scene_action_semantics(action,state): result["error_category"]="SEMANTIC_FAILURE"; return result
     result["semantic_valid"]=True; result["action_type_match"]=reference is not None and candidate["action_type"]==reference["action_type"]; result["parameters_match"]=reference is not None and candidate["parameters"]==reference["parameters"]; result["overall_match"]=result["action_type_match"] and result["parameters_match"]

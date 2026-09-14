@@ -15,12 +15,14 @@ User prompt
 
 The differentiator is not merely prompt-to-3D. The interface makes the safety boundary visible: invalid, ambiguous, or impossible actions are rejected before they can mutate the scene.
 
-## Current prototype
+## Current release candidate
 
-Version `0.4.0` is a hackathon-preparation prototype:
+Version `0.5.0` is the competition release candidate:
 
-- real WebGL 3D district rendered with Three.js;
-- procedural buses, roads, signals, streetlights, trees, and buildings;
+- real WebGL crossroads district rendered with Three.js;
+- Blender-authored electric buses, detailed streets, storefronts, signals and instanced foliage;
+- four straight traffic approaches with mutually exclusive EW/NS right-of-way, stop lines and an all-red clearance phase;
+- clear, rain, snow and fog scene modes with visible weather and simplified speed policies;
 - mouse/touch camera orbit, wheel zoom, reset, and visual pause;
 - six scene actions through a versioned protocol;
 - visible Candidate → Schema → Semantic → Execution trace;
@@ -29,7 +31,15 @@ Version `0.4.0` is a hackathon-preparation prototype:
 - runtime fingerprint and `/health` identity check;
 - Python standard-library server and test suite.
 
-![TransitLab v0.4 WebGL world builder](docs/transitlab-v04-showcase.png)
+![TransitLab v0.5 crossroads in the browser](docs/transitlab-crossroads-local.png)
+
+### Crossroads and city art
+
+The v0.5 candidate adds an original editable Blender bus, AI-generated asphalt and limestone textures, material-batched architecture, leaf-level foliage, real-time planar wet-road reflections and a deterministic crossroads controller. The **沉浸场景** button expands the viewport without changing scene state. This is an interactive WebGL scene, not an image used as the background.
+
+![Local city art candidate, captured in the browser](docs/transitlab-city-art-v1.png)
+
+The public Render deployment may lag this candidate until `/health` reports App `0.5.0`. See [asset provenance, reproduction and verification](docs/visual-city-upgrade-v0.1.md). This is a more detailed real-time art direction, not a claim of photorealism or traffic-simulation accuracy.
 
 The browser execution path still uses `FakeModelAdapter`. The real LLM remains shadow-only and cannot call `SceneState.apply`. This is intentional until evaluation evidence supports promotion.
 
@@ -58,7 +68,7 @@ The repository includes a reproducible Render Blueprint in [`render.yaml`](rende
 
 The server keeps loopback defaults locally and automatically binds to `0.0.0.0:$PORT` when Render supplies `PORT`. No database, Redis instance, Docker image, or API key is required for the deterministic public demo.
 
-The deterministic demo is live at [ai-builderkack-traffic-lab.onrender.com](https://ai-builderkack-traffic-lab.onrender.com). The deployment was verified on 2026-09-04 against commit `fbd8c05`: runtime identity, accepted scene changes, safe rejection, Event Log fingerprinting, WebGL rendering, and the browser console all passed. The complete evidence and rollback procedure is in [`docs/public-deployment-v0.4.md`](docs/public-deployment-v0.4.md).
+The deterministic demo is live at [ai-builderkack-traffic-lab.onrender.com](https://ai-builderkack-traffic-lab.onrender.com). Check `/health` for the exact deployed version and fingerprint. The v0.4 deployment evidence and rollback procedure remain in [`docs/public-deployment-v0.4.md`](docs/public-deployment-v0.4.md); v0.5 evidence is recorded separately after deployment.
 
 ## Supported instructions
 
@@ -70,16 +80,25 @@ Try:
 - `把红灯变回绿色`
 - `让公交车停下`
 - `让公交车继续行驶`
+- `让天气下雨`
+- `让天气下暴雪`
+- `让天气起雾`
+- `恢复晴天`
 
 Unsupported or combined requests are rejected without changing state, for example:
 
-- `让天气下暴雪`
+- `让天气下陨石`
 - `增加公交车并把灯变红`
+- `下雪并增加一辆公交车`
 - `让公交车在红灯前停下`
 
 ## Architecture boundary
 
-`scene3d.js` is a renderer. It receives scene data and controls only camera and visual animation. It does not parse commands, create `SceneAction`, run validation, or write server state.
+`scene3d.js` is a renderer. It receives scene data and browser-local simulation snapshots, then renders cameras, vehicles, signals and weather. The separate `traffic-controller.mjs` owns deterministic right-of-way and vehicle positions. Neither module parses commands, creates `SceneAction`, runs protocol validation, or writes server state.
+
+![Crossroads in snow mode](docs/transitlab-snow-local.png)
+
+The screenshot above shows four approaches, complementary EW/NS signals, Blender-authored buses and the simplified snow presentation.
 
 The only browser mutation route is:
 
@@ -94,7 +113,7 @@ POST /command
 
 ## Hackathon status
 
-This repository is preparing for the AI Builder Hackathon 2026. Kaggle participation is confirmed, the public repository is synchronized, the browser demo is live, and the submission writeup is saved as a draft. It is not yet a final submission: the sub-three-minute video and final submission verification are still outstanding.
+This repository is preparing for the AI Builder Hackathon 2026. Kaggle participation is confirmed, the browser demo has a public URL, and the submission writeup is maintained as a draft. It is not yet a final submission: v0.5 deployment verification, the sub-three-minute video and final Kaggle submission are still outstanding.
 
 See [docs/hackathon-prototype-v0.4.md](docs/hackathon-prototype-v0.4.md) for the rules-fit audit and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency provenance.
 
@@ -103,11 +122,12 @@ See [docs/hackathon-prototype-v0.4.md](docs/hackathon-prototype-v0.4.md) for the
 - deterministic commands do not yet generalize to arbitrary natural language;
 - the real LLM path is evaluation-only;
 - state and Event Log are process-local and reset when the server restarts;
-- vehicles follow visual loops rather than traffic physics or path planning;
+- traffic uses a browser-local fixed-step crossroads model with four straight routes; it is not calibrated traffic physics and does not yet include turns, pedestrians or route planning;
+- weather is a visual/speed-policy demonstration, not a meteorological simulation; “暴雪” currently maps to the single `snow` mode without intensity control;
 - the demo depends on a CDN-hosted Three.js module;
 - the free Render instance may cold-start after inactivity;
 - all visitors to one server instance share process-local demo state.
 
 ## License and provenance
 
-All scene geometry is generated in project code; no external 3D assets are used. Three.js is used under the MIT License. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The bus is authored by the included Blender script; editable `.blend`, GLB and browser mesh exports are included. City geometry and leaf textures are generated in project code. Asphalt and limestone base-color textures were AI-generated for this project. Three.js and its vendored Reflector addon use the MIT License. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

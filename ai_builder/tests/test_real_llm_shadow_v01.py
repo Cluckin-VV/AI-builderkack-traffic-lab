@@ -27,6 +27,11 @@ class ShadowV01Tests(unittest.TestCase):
     def test_action_type_match(self): self.assertTrue(evaluate_candidate("增加一辆公交车",self.candidate())["action_type_match"])
     def test_action_type_mismatch(self): self.assertEqual(evaluate_candidate("增加一辆公交车",self.candidate(action_type="move_bus"))["error_category"],"SEMANTIC_FAILURE")
     def test_parameter_mismatch(self): self.assertEqual(evaluate_candidate("红灯",self.candidate(action_type="set_traffic_light",parameters={"color":"绿灯"}), state=SceneState(traffic_light="红灯"))["error_category"],"PARAMETER_MISMATCH")
+    def test_weather_candidate_uses_current_v02_schema(self):
+        result = evaluate_candidate("下雪", self.candidate(action_type="set_weather", parameters={"weather":"snow"}))
+        self.assertTrue(result["schema_valid"])
+        self.assertTrue(result["semantic_valid"])
+        self.assertTrue(result["overall_match"])
     def test_api_error_category(self):
         opener=Mock(side_effect=OSError())
         with patch.dict(os.environ,{"AI_BUILDER_ENABLE_REAL_LLM":"1"}): self.assertEqual(OpenAIRealLLMAdapter(api_key="x",opener=opener).generate_scene_action("x")["error_category"],"API_ERROR")

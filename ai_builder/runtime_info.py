@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict
 
 
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.0"
 COMMAND_PROTOCOL_VERSION = "0.3"
 SCENE_ACTION_VERSION = "0.2"
 _PROJECT_ROOT = Path(__file__).resolve().parent
@@ -24,6 +24,13 @@ def source_fingerprint() -> str:
         "static/app.css",
         "static/app.js",
         "static/scene3d.js",
+        "static/urban-world.js",
+        "static/traffic-controller.mjs",
+        "static/weather-view.js",
+        "static/vendor/Reflector.js",
+        "static/models/city-bus-v1.json",
+        "static/textures/asphalt-ai-v1.png",
+        "static/textures/limestone-ai-v1.png",
     ):
         path = _PROJECT_ROOT / name
         digest.update(name.encode("utf-8"))

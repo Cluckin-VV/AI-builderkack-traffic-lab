@@ -41,12 +41,12 @@ class ScenePipelineTests(unittest.TestCase):
         action = SceneAction("set_traffic_light", {"color": "紫灯"})
         validation = Validator().validate(action, self.state)
         self.assertEqual(validation.status, "rejected")
-        self.assertEqual(self.state.snapshot(), {"buses": 0, "traffic_light": "绿灯"})
+        self.assertEqual(self.state.snapshot(), {"buses": 0, "traffic_light": "绿灯", "bus_running": True, "weather": "clear"})
 
     def test_two_legal_commands_update_one_state(self):
         render_command("增加一辆公交车", self.state, self.log)
         render_command("把信号灯变成红灯", self.state, self.log)
-        self.assertEqual(self.state.snapshot(), {"buses": 1, "traffic_light": "红灯"})
+        self.assertEqual(self.state.snapshot(), {"buses": 1, "traffic_light": "红灯", "bus_running": True, "weather": "clear"})
 
     def test_event_log_explains_command_action_validation_and_state_change(self):
         render_command("增加一辆公交车", self.state, self.log)
@@ -54,7 +54,7 @@ class ScenePipelineTests(unittest.TestCase):
         self.assertEqual(event["command"], "增加一辆公交车")
         self.assertEqual(event["action"], {"name": "add_bus", "parameters": {}})
         self.assertEqual(event["validation"], {"status": "accepted", "reason": "valid"})
-        self.assertEqual(event["state_change"], {"before": {"buses": 0, "traffic_light": "绿灯"}, "after": {"buses": 1, "traffic_light": "绿灯"}})
+        self.assertEqual(event["state_change"], {"before": {"buses": 0, "traffic_light": "绿灯", "bus_running": True, "weather": "clear"}, "after": {"buses": 1, "traffic_light": "绿灯", "bus_running": True, "weather": "clear"}})
 
     def test_browser_http_endpoint_returns_scene_and_event_log(self):
         server = ThreadingHTTPServer(("127.0.0.1", 0), SceneHandler)
@@ -77,7 +77,7 @@ class ScenePipelineTests(unittest.TestCase):
     def test_renderer_exposes_read_only_3d_scene_data(self):
         result = render_command("增加一辆公交车", self.state, self.log)
         self.assertEqual(result["scene"]["projection"], "perspective")
-        self.assertEqual(result["scene"]["road"], {"lanes": 2, "length": 100})
+        self.assertEqual(result["scene"]["road"], {"layout": "crossroads", "approaches": 4, "lanes_per_road": 2, "length": 160})
         self.assertEqual(result["scene"]["bus_count"], 1)
         self.assertEqual(result["scene"]["traffic_light"], "绿灯")
 

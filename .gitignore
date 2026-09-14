@@ -14,3 +14,5 @@ tmp/
 output/
 artifacts/
 progress.md
+.playwright-cli/
+*.blend1

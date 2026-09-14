@@ -33,8 +33,8 @@ class EvaluationCaseTests(unittest.TestCase):
                 rejected += 1
                 if event["state_before"] != event["state_after"]:
                     state_errors += 1
-        self.assertEqual(accepted, 13)
-        self.assertEqual(rejected, 10)
+        self.assertEqual(accepted, 19)
+        self.assertEqual(rejected, 12)
         self.assertEqual(state_errors, 0)
         self.assertEqual(log_errors, 0)
 

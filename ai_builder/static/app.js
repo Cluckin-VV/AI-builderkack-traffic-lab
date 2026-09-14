@@ -18,6 +18,7 @@ const labels = {
   set_traffic_light: "切换信号灯",
   stop_bus: "公交车停止",
   move_bus: "公交车继续行驶",
+  set_weather: "切换天气",
   unknown: "未知动作",
 };
 
@@ -34,7 +35,8 @@ const reasons = {
 };
 
 let world = null;
-let lastScene = { buses: 0, bus_count: 0, bus_running: true, traffic_light: "绿灯" };
+const weatherLabels = { clear: "晴", rain: "雨", snow: "雪", fog: "雾" };
+let lastScene = { buses: 0, bus_count: 0, bus_running: true, traffic_light: "绿灯", weather: "clear" };
 let visualPaused = false;
 let eventCount = 0;
 
@@ -70,16 +72,35 @@ function setSceneState(scene) {
   lastScene = { ...lastScene, ...scene };
   const count = Number(lastScene.bus_count ?? lastScene.buses ?? 0);
   const running = lastScene.bus_running !== false;
-  const motionLabel = count === 0 ? "等待车辆" : running ? "行驶中" : "已停止";
+  const motionLabel = count === 0 ? "等待车辆" : running ? "允许行驶" : "手动停止";
 
   document.querySelector("#bus-count").textContent = String(count);
   document.querySelector("#motion-state").textContent = motionLabel;
-  document.querySelector("#light-state").textContent = lastScene.traffic_light ?? "绿灯";
+  document.querySelector("#weather-state").textContent = weatherLabels[lastScene.weather] ?? lastScene.weather;
   document.querySelector("#state-buses").textContent = String(count);
   document.querySelector("#state-running").textContent = count === 0 ? "—" : String(running);
   document.querySelector("#state-light").textContent = lastScene.traffic_light ?? "绿灯";
+  document.querySelector("#state-weather").textContent = lastScene.weather ?? "clear";
   world?.syncState(lastScene);
 }
+
+sceneRoot.addEventListener("traffic-frame", (event) => {
+  const frame = event.detail;
+  const counts = { moving: 0, red_light: 0, manual_stop: 0, following: 0 };
+  for (const vehicle of frame.vehicles) counts[vehicle.reason] = (counts[vehicle.reason] ?? 0) + 1;
+  let actual = "等待车辆";
+  if (frame.vehicles.length) {
+    const waiting = counts.red_light + counts.following;
+    if (counts.manual_stop) actual = `${counts.manual_stop} 辆手动停止`;
+    else if (counts.moving && waiting) actual = `${counts.moving} 行驶 · ${waiting} 等待`;
+    else if (counts.moving) actual = `${counts.moving} 辆行驶`;
+    else if (waiting) actual = `${waiting} 辆等红灯`;
+  }
+  document.querySelector("#motion-state").textContent = frame.clearance ? `全红清空 · ${actual}` : actual;
+  document.querySelector("#light-state").textContent = `EW ${frame.lights.EW[0]} · NS ${frame.lights.NS[0]}`;
+  sceneRoot.dataset.trafficPhase = frame.clearance ? "clearance" : frame.lights.EW === "绿灯" ? "EW" : "NS";
+  sceneRoot.dataset.vehicleReasons = JSON.stringify(counts);
+});
 
 function explainEvent(event) {
   const reason = event?.validation_result?.reason ?? event?.rejected_reason ?? event?.error_code;
@@ -226,6 +247,12 @@ for (const button of document.querySelectorAll("[data-command]")) {
     form.requestSubmit();
   });
 }
+
+document.querySelector("#immersive-view").addEventListener("click", (event) => {
+  const active = document.body.classList.toggle("immersive");
+  event.currentTarget.setAttribute("aria-pressed", String(active));
+  event.currentTarget.textContent = active ? "返回工作台" : "沉浸场景";
+});
 
 document.querySelector("#reset-camera").addEventListener("click", () => {
   world?.resetCamera();

@@ -8,7 +8,7 @@ from collections import Counter
 from typing import Any, Dict
 
 from ai_builder.real_llm_adapter import build_shadow_adapter
-from ai_builder.scene import EventLog, SceneAction, SceneState, Validator
+from ai_builder.scene import SceneAction, SceneState, validate_scene_action_schema, validate_scene_action_semantics
 from ai_builder.real_llm_shadow import OpenAIRealLLMAdapter, shadow_case
 
 ERROR_CATEGORIES = ("CONFIG_ERROR", "API_ERROR", "TIMEOUT", "MODEL_REFUSAL", "INVALID_JSON", "SCHEMA_FAILURE", "SEMANTIC_FAILURE", "ACTION_TYPE_MISMATCH", "PARAMETER_MISMATCH", "UNSUPPORTED_INTENT")
@@ -75,7 +75,7 @@ def evaluate() -> Dict[str, Any]:
     expected_fields = {"protocol_version", "action_id", "action_type", "parameters", "source", "metadata"}
     records = []
     for case in cases:
-        state, log = SceneState(), EventLog()
+        state = SceneState(buses=1) if case["expected_action_type"] == "move_bus" else SceneState()
         before = state.snapshot()
         raw = ""
         action = None
@@ -90,32 +90,39 @@ def evaluate() -> Dict[str, Any]:
             payload = json.loads(raw) if isinstance(raw, str) else output
             counts["json_ok"] += 1
             json_ok = True
+            if not isinstance(payload, dict):
+                raise TypeError("SceneAction must be an object")
             counts["extra_fields"] += len(set(payload) - expected_fields)
-            action = SceneAction(**payload)
-            action_constructed = True
-            actual_action_type = action.action_type
-            validation = Validator().validate(action, state)
-            if validation.status == "accepted":
+            actual_action_type = payload.get("action_type")
+            schema_errors = validate_scene_action_schema(payload)
+            if schema_errors:
+                reason = schema_errors[0].code
+                validation_status = "rejected"
+            else:
+                target = {"add_bus":"road", "remove_bus":"road", "set_traffic_light":"traffic_light",
+                          "stop_bus":"bus", "move_bus":"bus", "set_weather":"scene"}[payload["action_type"]]
+                action = SceneAction(payload["action_type"], target, payload["parameters"], case["command"], payload["action_id"])
+                action_constructed = True
+                semantic_errors = validate_scene_action_semantics(action, state)
+                reason = semantic_errors[0].code if semantic_errors else None
+                validation_status = "rejected" if semantic_errors else "accepted"
+            if validation_status == "accepted":
                 counts["action_ok"] += 1
                 if case["expected_status"] == "accepted": counts["valid_accepted"] += 1
                 else: counts["unsafe_acceptance"] += 1
-            else: reason = validation.reason
-            if validation.status == "rejected":
+            if validation_status == "rejected":
                 if case["expected_status"] == "rejected": counts["invalid_rejected"] += 1
                 else: counts["false_rejection"] += 1
         except (json.JSONDecodeError, TypeError, ValueError, KeyError, RuntimeError) as error:
             reason = "invalid JSON" if isinstance(error, json.JSONDecodeError) else str(error)
             validation_status = "rejected"
-        else:
-            validation_status = validation.status
         after = state.snapshot()
         if after != before: counts["state_changes"] += 1
-        if reason:
+        if reason and not (case["expected_status"] == "rejected" and validation_status == "rejected"):
             if not json_ok: failure_category = "invalid_json"
-            elif not action_constructed and "required field" in reason: failure_category = "missing_field"
-            elif actual_action_type not in {"add_bus", "remove_bus", "set_traffic_light", "stop_bus", "move_bus"}: failure_category = "unknown_action_type"
-            elif "color" in reason or "parameter" in reason: failure_category = "invalid_parameter"
-            elif case["expected_status"] == "rejected": failure_category = "unsupported_expression"
+            elif reason == "MISSING_FIELD": failure_category = "missing_field"
+            elif reason == "UNKNOWN_ACTION_TYPE": failure_category = "unknown_action_type"
+            elif reason in {"INVALID_ENUM", "INVALID_PARAMETER", "INVALID_TYPE"}: failure_category = "invalid_parameter"
             else: failure_category = "other"
         records.append({"case_id": case["id"], "command": case["command"], "expected_status": case["expected_status"], "json_parse_success": json_ok, "scene_action_constructed": action_constructed, "validator_result": validation_status, "rejected_reason": reason, "expected_action_type": case["expected_action_type"], "actual_action_type": actual_action_type, "failure_category": failure_category, "raw_model_output": raw})
     total = len(cases)

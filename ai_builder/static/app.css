@@ -500,7 +500,7 @@ kbd {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 110px rgba(0, 0, 0, 0.58);
+  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.23);
 }
 
 .viewport::before,
@@ -907,6 +907,17 @@ kbd {
   background: #050d0b;
   font: 600 8px/1.2 ui-monospace, "SFMono-Regular", Consolas, monospace;
   letter-spacing: 0.04em;
+}
+
+.immersive .workspace { display: block; }
+.immersive .control-rail, .immersive .inspector { display: none; }
+.immersive .stage { height: calc(100vh - 108px); min-height: 650px; }
+.immersive .viewport { min-height: 360px; }
+.immersive .pipeline, .immersive .stage-header { flex-shrink: 0; }
+.scene-root[data-bus-asset="failed"]::after {
+  content: "公交模型加载失败：当前显示简化模型";
+  position: absolute; bottom: 80px; left: 24px; color: #ffcc7a;
+  background: #18232c; padding: 10px;
 }
 
 @media (max-width: 1280px) {

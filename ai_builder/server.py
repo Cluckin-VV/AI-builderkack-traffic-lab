@@ -17,9 +17,17 @@ from ai_builder.scene import EventLog, Renderer, SceneState
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 PAGE = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 STATIC_FILES = {
+    "/assets/vendor/Reflector.js": ("text/javascript; charset=utf-8", STATIC_DIR / "vendor/Reflector.js"),
     "/assets/app.css": ("text/css; charset=utf-8", STATIC_DIR / "app.css"),
     "/assets/app.js": ("text/javascript; charset=utf-8", STATIC_DIR / "app.js"),
     "/assets/scene3d.js": ("text/javascript; charset=utf-8", STATIC_DIR / "scene3d.js"),
+    "/assets/urban-world.js": ("text/javascript; charset=utf-8", STATIC_DIR / "urban-world.js"),
+    "/assets/traffic-controller.mjs": ("text/javascript; charset=utf-8", STATIC_DIR / "traffic-controller.mjs"),
+    "/assets/weather-view.js": ("text/javascript; charset=utf-8", STATIC_DIR / "weather-view.js"),
+    "/assets/models/city-bus-v1.json": ("application/json", STATIC_DIR / "models/city-bus-v1.json"),
+    "/assets/models/city-bus-v1.glb": ("model/gltf-binary", STATIC_DIR / "models/city-bus-v1.glb"),
+    "/assets/textures/asphalt-ai-v1.png": ("image/png", STATIC_DIR / "textures/asphalt-ai-v1.png"),
+    "/assets/textures/limestone-ai-v1.png": ("image/png", STATIC_DIR / "textures/limestone-ai-v1.png"),
 }
 
 

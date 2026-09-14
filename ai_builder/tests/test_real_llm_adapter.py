@@ -25,7 +25,11 @@ class RealLLMAdapterTests(unittest.TestCase):
 
     def test_shadow_evaluation_records_all_cases(self):
         result = evaluate()
-        self.assertEqual(len(result["records"]), 23)
+        self.assertEqual(len(result["records"]), 31)
+        self.assertEqual(result["expected_valid_acceptance"], 1.0)
+        self.assertEqual(result["expected_invalid_rejection"], 1.0)
+        self.assertEqual(result["false_rejection"], 0)
+        self.assertEqual(result["unsafe_acceptance"], 0)
 
     def test_shadow_evaluation_has_no_protocol_extras_with_fake(self):
         self.assertEqual(evaluate()["extra_fields"], 0)

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 SCENE_ACTION_PROTOCOL_VERSION = "0.2"
-SCENE_ACTION_TYPES = {"add_bus", "remove_bus", "set_traffic_light", "stop_bus", "move_bus"}
+SCENE_ACTION_TYPES = {"add_bus", "remove_bus", "set_traffic_light", "stop_bus", "move_bus", "set_weather"}
 
 
 @dataclass(frozen=True)
@@ -43,7 +43,7 @@ def validate_scene_action_schema(payload: Any) -> List[ValidationError]:
         value = payload["metadata"]["confidence"]
         if not isinstance(value, (int, float)) or not 0 <= value <= 1:
             errors.append(ValidationError("INVALID_PARAMETER", "confidence must be between 0 and 1", "metadata.confidence"))
-    wanted = {"color"} if payload.get("action_type") == "set_traffic_light" else set()
+    wanted = {"color"} if payload.get("action_type") == "set_traffic_light" else {"weather"} if payload.get("action_type") == "set_weather" else set()
     if isinstance(payload.get("parameters"), dict):
         for field in sorted(set(payload["parameters"]) - wanted):
             errors.append(ValidationError("UNKNOWN_FIELD", "Unknown parameter", f"parameters.{field}"))
@@ -51,6 +51,10 @@ def validate_scene_action_schema(payload: Any) -> List[ValidationError]:
             errors.append(ValidationError("MISSING_FIELD", "Missing parameter", f"parameters.{field}"))
         if "color" in payload["parameters"] and payload.get("action_type") == "set_traffic_light" and payload["parameters"]["color"] not in {"红灯", "黄灯", "绿灯"}:
             errors.append(ValidationError("INVALID_ENUM", "Unsupported traffic light color", "parameters.color"))
+    if payload.get("action_type") == "set_weather" and isinstance(payload.get("parameters"), dict):
+        value = payload["parameters"].get("weather")
+        if not isinstance(value, str) or value not in {"clear", "rain", "snow", "fog"}:
+            errors.append(ValidationError("INVALID_ENUM", "Unsupported weather", "parameters.weather"))
     return errors
 
 
@@ -68,16 +72,16 @@ class SceneState:
     buses: int = 0
     traffic_light: str = "绿灯"
     bus_running: bool = True
+    weather: str = "clear"
 
     def snapshot(self) -> Dict[str, Any]:
-        return {"buses": self.buses, "traffic_light": self.traffic_light}
+        return {"buses": self.buses, "traffic_light": self.traffic_light, "bus_running": self.bus_running, "weather": self.weather}
 
     def apply(self, action: "SceneAction", validation: Optional["ValidationResult"] = None) -> None:
         if validation is None or validation.status != "accepted" or validation.action_id != action.action_id:
             raise ValueError("SceneState 只能接受经过 Validator 的 SceneAction")
         if action.action_type == "add_bus":
             self.buses += 1
-            self.bus_running = True
         elif action.action_type == "remove_bus":
             self.buses -= 1
             if self.buses == 0:
@@ -88,6 +92,8 @@ class SceneState:
             self.bus_running = False
         elif action.action_type == "move_bus":
             self.bus_running = True
+        elif action.action_type == "set_weather":
+            self.weather = action.parameters["weather"]
         else:
             raise ValueError("未知 action_type")
 
@@ -139,6 +145,12 @@ class SceneAction:
 
 class SceneCompiler:
     _COMMANDS = {
+        **{text: ("set_weather", "scene", {"weather": weather}) for weather, expressions in {
+            "clear": ("晴天", "切换晴天", "恢复晴天", "clear weather"),
+            "rain": ("下雨", "让天气下雨", "切换雨天", "make it rain"),
+            "snow": ("下雪", "让天气下雪", "让天气下暴雪", "切换雪天", "make it snow"),
+            "fog": ("起雾", "让天气起雾", "切换雾天", "make it foggy"),
+        }.items() for text in expressions},
         "增加一辆公交车": ("add_bus", "road", {}), "场景里来一辆公交车": ("add_bus", "road", {}), "放一辆公交车到道路上": ("add_bus", "road", {}),
         "删除一辆公交车": ("remove_bus", "road", {}), "移除一辆公交车": ("remove_bus", "road", {}), "删除公交车": ("remove_bus", "road", {}),
         "把信号灯变成红灯": ("set_traffic_light", "traffic_light", {"color": "红灯"}), "红灯": ("set_traffic_light", "traffic_light", {"color": "红灯"}), "设置为红色": ("set_traffic_light", "traffic_light", {"color": "红灯"}),
@@ -151,7 +163,7 @@ class SceneCompiler:
     }
 
     def compile(self, command: str) -> Optional[SceneAction]:
-        spec = self._COMMANDS.get(command)
+        spec = self._COMMANDS.get(command.strip().lower().rstrip("。.!！"))
         return None if spec is None else SceneAction(*spec, source_command=command)
 
 
@@ -166,9 +178,9 @@ class ValidationResult:
 
 
 class Validator:
-    _ALLOWED = {"add_bus", "remove_bus", "set_traffic_light", "stop_bus", "move_bus"}
-    _TARGETS = {"add_bus": "road", "remove_bus": "road", "set_traffic_light": "traffic_light", "stop_bus": "bus", "move_bus": "bus"}
-    _PARAMETERS = {"add_bus": set(), "remove_bus": set(), "stop_bus": set(), "move_bus": set(), "set_traffic_light": {"color"}}
+    _ALLOWED = SCENE_ACTION_TYPES
+    _TARGETS = {"add_bus": "road", "remove_bus": "road", "set_traffic_light": "traffic_light", "stop_bus": "bus", "move_bus": "bus", "set_weather": "scene"}
+    _PARAMETERS = {"add_bus": set(), "remove_bus": set(), "stop_bus": set(), "move_bus": set(), "set_traffic_light": {"color"}, "set_weather": {"weather"}}
     _COLORS = {"红灯", "黄灯", "绿灯"}
 
     def validate(self, action: Optional[SceneAction], state: SceneState) -> ValidationResult:
@@ -181,12 +193,13 @@ class Validator:
         if set(action.parameters) != self._PARAMETERS[action.action_type]: return ValidationResult("rejected", "unknown parameters", action.action_id)
         if action.action_type == "set_traffic_light" and (not isinstance(action.parameters["color"], str) or action.parameters["color"] not in self._COLORS): return ValidationResult("rejected", "illegal color", action.action_id)
         if action.action_type in {"remove_bus", "stop_bus", "move_bus"} and state.buses == 0: return ValidationResult("rejected", "no bus exists", action.action_id)
+        if action.action_type == "set_weather" and (not isinstance(action.parameters["weather"], str) or action.parameters["weather"] not in {"clear", "rain", "snow", "fog"}): return ValidationResult("rejected", "illegal weather", action.action_id)
         return ValidationResult("accepted", "valid", action.action_id)
 
 
 class Renderer:
     def render_data(self, state: SceneState) -> Dict[str, Any]:
-        return {"projection": "perspective", "road": {"lanes": 2, "length": 100}, "bus_count": state.buses, "bus_running": state.bus_running, "traffic_light": state.traffic_light}
+        return {"projection": "perspective", "road": {"layout": "crossroads", "approaches": 4, "lanes_per_road": 2, "length": 160}, "bus_count": state.buses, "bus_running": state.bus_running, "traffic_light": state.traffic_light}
 
     def render(self, state: SceneState) -> str:
         return f"公交车：{state.buses}；信号灯：{state.traffic_light}"

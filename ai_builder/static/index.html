@@ -67,7 +67,8 @@
           <button type="button" data-command="让公交车停下"><b>03</b><span>让公交车停下</span><i>STOP</i></button>
           <button type="button" data-command="让公交车继续行驶"><b>04</b><span>让公交车继续行驶</span><i>MOVE</i></button>
           <button type="button" data-command="删除一辆公交车"><b>05</b><span>删除一辆公交车</span><i>REMOVE</i></button>
-          <button class="boundary-prompt" type="button" data-command="让天气下暴雪"><b>06</b><span>让天气下暴雪</span><i>BOUNDARY</i></button>
+          <button type="button" data-command="让天气下暴雪"><b>06</b><span>让天气下暴雪</span><i>WEATHER</i></button>
+          <button class="boundary-prompt" type="button" data-command="让天气下陨石"><b>07</b><span>让天气下陨石</span><i>REJECT</i></button>
         </div>
       </div>
     </section>
@@ -76,13 +77,14 @@
       <header class="stage-header">
         <div>
           <span class="eyebrow">LIVE WEBGL WORLD</span>
-          <h2 id="viewport-title">NEXUS DISTRICT <small>/ 交通数字孪生</small></h2>
+          <h2 id="viewport-title">NEXUS CROSSING <small>/ AI 交通情景实验室</small></h2>
         </div>
         <div class="stage-actions" aria-label="3D 场景控制">
           <button id="toggle-motion" type="button" aria-pressed="false" title="暂停或继续视觉动画">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
             <span>暂停动画</span>
           </button>
+          <button id="immersive-view" type="button" aria-pressed="false">沉浸场景</button>
           <button id="reset-camera" type="button">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"/></svg>
             <span>重置镜头</span>
@@ -98,13 +100,14 @@
         </div>
         <div class="viewport-vignette" aria-hidden="true"></div>
         <div class="scene-status">
-          <span class="coordinate">SECTOR 31.2304° N · 121.4737° E</span>
+          <span class="coordinate">东西 EW ↔ · 南北 NS ↕</span>
           <span class="camera-help">拖动旋转 · 滚轮缩放</span>
         </div>
         <div class="scene-telemetry" aria-label="场景实时状态">
           <div><span>公交车</span><strong id="bus-count">0</strong></div>
-          <div><span>运行状态</span><strong id="motion-state">等待车辆</strong></div>
-          <div><span>信号灯</span><strong id="light-state">绿灯</strong></div>
+          <div><span>车辆实况</span><strong id="motion-state">等待车辆</strong></div>
+          <div><span>路口相位</span><strong id="light-state">EW 绿 · NS 红</strong></div>
+          <div><span>天气</span><strong id="weather-state">晴</strong></div>
         </div>
         <div id="command-status" class="command-status is-ready" role="status" aria-live="polite">
           <span class="status-symbol" aria-hidden="true">●</span>
@@ -138,6 +141,7 @@
           <div><dt>bus_count</dt><dd id="state-buses">0</dd></div>
           <div><dt>bus_running</dt><dd id="state-running">true</dd></div>
           <div><dt>traffic_light</dt><dd id="state-light">绿灯</dd></div>
+          <div><dt>weather</dt><dd id="state-weather">clear</dd></div>
         </dl>
       </section>
 
@@ -177,7 +181,7 @@
 
   <footer class="footer">
     <span>Deterministic baseline · Real LLM remains shadow-only</span>
-    <span>Three.js r180 · MIT License · Procedural assets</span>
+    <span>Three.js r180 · Blender bus · AI asphalt texture</span>
     <span>Started At {{started_at}}</span>
   </footer>
 </body>
