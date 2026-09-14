@@ -4,6 +4,8 @@ Status: **release candidate; public verification pending**
 
 Public URL: https://ai-builderkack-traffic-lab.onrender.com
 
+Release candidate commit: `7f4e6ce3fbb6565fc9aeec492fc21cc411336dc8` (local and GitHub `main` verified equal on 2026-09-14)
+
 ## Release contract
 
 The v0.5 deployment must expose exactly one free Python web service and no database, Redis service, worker, Docker image or production model key.
@@ -56,7 +58,7 @@ Verified 2026-09-14 before commit and deployment:
 - Evaluation: legal 19/19, invalid/ambiguous 12/12, unsafe state mutations 0, Event Log omissions 0.
 - Real browser: 7 accepted commands and 2 safe rejections; authored bus asset ready; rejected canvas identical while visual animation was paused; mobile horizontal overflow false; page errors 0.
 
-The health Git commit was still the pre-release base `98661c5` because these candidate changes had not yet been committed. The public section above remains unchecked until the new commit is deployed.
+The local health check was started before the candidate commit, so its Git field still showed base `98661c5`; the source fingerprint already covered the candidate files. The candidate was subsequently committed as `7f4e6ce` and synchronized to GitHub with an exact tree and commit SHA. The public section above remains unchecked until Render deploys that commit.
 
 ## Rollback
 

@@ -150,7 +150,7 @@ AI-native 3D creation should not require trusting a black box with the keys to t
 - [x] Project direction checked against the official announcement and Terms.
 - [x] Organizer registration forms completed by the participant; no organizer confirmation email has been independently verified in this document.
 - [ ] Organizer confirms treatment/disclosure of work created before 2026-09-11.
-- [ ] Local v0.5 release candidate committed and pushed to the public repository without force-push.
+- [x] Local v0.5 release candidate committed and pushed to the public repository without force-push (`7f4e6ce`).
 - [x] Hosted demo URL added and verified through public HTTP and a separate browser session.
 - [ ] Demo video under three minutes added.
 - [x] Offline shadow evaluator reports expected-valid acceptance and expected-invalid rejection separately with zero state mutation.
