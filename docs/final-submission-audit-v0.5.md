@@ -2,7 +2,7 @@
 
 检查时间：2026-09-16。范围：当前公开 AI Builder Hackathon 2026、仓库 `0594648`、部署 `038a9ef` / `4c6d083172e4`、已发布 `v0.5.0-rc.1` 视频。用户所说“CAC”未给出独立规则地址；本报告不声称符合另一项竞赛。
 
-**结论：暂不提交（NO-GO），不是判定项目已被取消资格。** 用户已授权检查通过后提交；确定性容量缺陷已在本地修复并通过回归测试，但尚未提交、部署。规则/时间冲突及登录入口阻塞仍未解除。没有点击 Submit，没有扩大命令协议或重写历史。
+**结论：暂不提交（NO-GO），不是判定项目已被取消资格。** 用户已授权检查通过后提交；确定性容量缺陷已修复、通过回归测试并推送至GitHub提交 `de6cc52`，但公开Render尚未部署该提交。规则/时间冲突及登录入口阻塞仍未解除。没有点击 Submit，没有扩大命令协议或重写历史。
 
 ## 1. 可复核的基本功能
 
@@ -28,7 +28,7 @@ TrafficController.configure({buses:13}) → snapshot().vehicles.length = 12
 - `ai_builder/static/traffic-controller.mjs::TrafficController.configure` 把数量截到12。
 - `ai_builder/static/scene3d.js::Scene3DRenderer.setBusCount` 同样截到12（具体类名以文件定义为准）。
 
-影响：原行为中，第13次成功响应不能兑现为新增可见车辆，违背“指令与画面一致”的验收目标。现已建立明确的12辆容量契约：第12辆接受，第13辆在语义验证阶段以 `SEMANTIC_CAPACITY_REACHED` 拒绝且状态不变，删除后可再次添加；`SceneState.apply` 也保护容量不变量。浏览器仿真和渲染共用前端 `MAX_BUSES`。新增5个Python单元测试、1个HTTP集成测试和1个JavaScript容量测试；完整结果为215个Python测试与9个JavaScript测试全部通过。此修复仍只在本地，公开部署尚未更新。
+影响：原行为中，第13次成功响应不能兑现为新增可见车辆，违背“指令与画面一致”的验收目标。现已建立明确的12辆容量契约：第12辆接受，第13辆在语义验证阶段以 `SEMANTIC_CAPACITY_REACHED` 拒绝且状态不变，删除后可再次添加；`SceneState.apply` 也保护容量不变量。浏览器仿真和渲染共用前端 `MAX_BUSES`。新增5个Python单元测试、1个HTTP集成测试和1个JavaScript容量测试；完整结果为215个Python测试与9个JavaScript测试全部通过。修复已推送至GitHub `de6cc52`；公开 `/health` 仍报告旧部署 `038a9ef` / `4c6d083172e4`，所以公开验收尚未完成。
 
 ## 3. 获奖竞争力不是测试数量
 
