@@ -1,10 +1,12 @@
 # TransitLab public deployment v0.5
 
-Status: **deployed; public HTTP and isolated Chromium browser acceptance passed on 2026-09-14**
+Status: **deployed; public HTTP and isolated Chromium browser acceptance passed on 2026-09-16**
 
 ## Verified public deployment
 
-The running service reports App `0.5.0`, Command Protocol `0.3`, SceneAction `0.2`, commit `038a9ef`, fingerprint `4c6d083172e4`, started at `2026-09-14T11:52:54.960267+08:00`.
+The running service reports App `0.5.0`, Command Protocol `0.3`, SceneAction `0.2`, commit `5560a2c`, fingerprint `1ca09f9fab50`, started at `2026-09-16T14:59:56.031284+08:00`.
+
+The 2026-09-16 capacity acceptance started from zero buses, accepted twelve consecutive additions, and rejected the thirteenth at semantic validation with `SEMANTIC_CAPACITY_REACHED`. Its complete before/after state snapshots were identical and the Event Log fingerprint matched `/health`. The check then removed all twelve test buses and restored the public scene to zero buses, running enabled, green signal and clear weather. A fresh isolated Chromium session rendered the WebGL crossroads, displayed the expected safe-rejection explanation for `让天气下陨石`, retained the restored state, and reported zero console errors or warnings.
 
 Public HTTP verification completed 12 commands: ten accepted at execution (add, stop, move, red, green, snow, rain, fog, clear, remove) and two rejected at schema (meteor and combined add/light). Both rejected events preserved complete state snapshots and included rejection reasons. All twelve Event Log fingerprints matched `/health`.
 
@@ -61,6 +63,7 @@ The final values are recorded only after a successful public check. A stale v0.4
 - [x] `让天气下陨石` is rejected and leaves the complete state snapshot unchanged.
 - [x] Event Log runtime fingerprint matches `/health`.
 - [x] Desktop and 390 px layouts remain usable.
+- [x] The twelfth bus is accepted; the thirteenth is rejected before execution and the public state is restored after verification.
 
 ## Local release-candidate evidence
 
@@ -73,6 +76,8 @@ Verified 2026-09-14 before commit and deployment:
 - Real browser: 7 accepted commands and 2 safe rejections; authored bus asset ready; rejected canvas identical while visual animation was paused; mobile horizontal overflow false; page errors 0.
 
 The local health check was started before the candidate commit, so its Git field still showed base `98661c5`; the source fingerprint already covered the candidate files. The candidate was subsequently committed as `7f4e6ce` and synchronized to GitHub with an exact tree and commit SHA. Render deployed the later documentation commit `038a9ef` with the same business source fingerprint.
+
+The capacity consistency fix was later committed as `de6cc52`; documentation closure advanced `main` to `5560a2c`. The final public runtime identity above proves that Render deployed this exact main commit.
 
 ## Rollback
 
