@@ -1,8 +1,8 @@
 # Kaggle Writeup Draft v0.1 — TransitLab
 
-> Internal status: **DRAFT — do not submit for judging yet.**
+> Internal status: **FINAL SUBMISSION CANDIDATE — online form verification pending.**
 >
-> The public repository, v0.5 browser demo and 2:12 English-captioned MP4 are live and independently verified on 2026-09-14. Before final submission, check Kaggle's video-link compatibility and resolve the eligibility/disclosure item below. This local draft is not proof that the online Writeup has been saved or submitted.
+> The public repository, v0.5 browser demo and 2:12 English-captioned MP4 are live and independently verified through 2026-09-16. This local draft is not proof that the online Writeup has been saved or submitted.
 
 ## Kaggle fields
 
@@ -73,7 +73,7 @@ The scene is controlled through a strict `SceneAction` envelope rather than arbi
   "action_id": "deterministic-id",
   "action_type": "set_traffic_light",
   "parameters": {
-    "color": "red"
+    "color": "红灯"
   },
   "source": "model",
   "metadata": {
@@ -88,7 +88,7 @@ Only an action that passes both stages may reach `SceneState.apply`, and a valid
 
 ### Safety that can be demonstrated, not merely claimed
 
-The v0.5 release candidate passes 209 Python tests plus 8 standalone JavaScript traffic-controller tests. The suites cover domain behavior, protocol serialization, malformed model output, schema and semantic short-circuiting, HTTP integration, runtime identity, browser assets, deployment configuration, signal conflict prevention, red-light stopping and the invariant that rejected actions cannot mutate state.
+The v0.5 release candidate passes 215 Python tests plus 9 standalone JavaScript traffic-controller tests. The suites cover domain behavior, protocol serialization, malformed model output, schema and semantic short-circuiting, HTTP integration, runtime identity, browser assets, deployment configuration, signal conflict prevention, red-light stopping, the 12-bus visible-capacity contract, and the invariant that rejected actions cannot mutate state.
 
 The deterministic command evaluation set currently reports:
 
@@ -123,14 +123,19 @@ This is an intentional capability boundary, not a hidden limitation. Real-model 
 
 The renderer reads scene state but does not parse language, validate business rules, or mutate server state. The model adapter generates candidates but never receives direct write access to the scene.
 
-### What remains before the final submission
+### Development chronology and disclosure
 
-TransitLab is a working release candidate, not yet a finished competition submission. Before judging, the project must complete:
+TransitLab began as a personal deterministic traffic-scene prototype before the official build period; that history remains visible in the public Git repository. During the official build period, the project added the v0.5 four-way crossroads world, original Blender bus and procedural city presentation, weather modes, fixed-step right-of-way controller, public browser acceptance, competition video, and the final cross-layer capacity contract.
 
-1. confirm that Kaggle accepts/displays the public MP4 link (the 2:12 video is already published and anonymously downloadable);
-2. final public-link checks (v0.5 HTTP, clean-browser interaction and mobile acceptance already passed on 2026-09-14);
-3. broader unknown-prompt and judge-prompt evaluation;
-4. a final claim audit and submission decision (`v0.5.0-rc.1` already pins the demonstrated source commit).
+Open-source, pre-existing and AI-assisted materials are disclosed in `THIRD_PARTY_NOTICES.md`. The repository does not rewrite or conceal pre-build commits. All submitted materials are project-owned or used under the documented terms.
+
+### Current scope and honest limits
+
+- The public executable path is deterministic and supports a documented single-action command set; it does not claim arbitrary-language world generation.
+- The real LLM adapter remains evaluation-only and cannot mutate the scene.
+- Traffic and weather are interactive demonstrations, not calibrated transport or meteorological simulation.
+- State is shared and process-local on the free demo service and resets when the service restarts.
+- Judges may use prompts outside the supported examples; unsupported prompts are safely rejected and explained rather than guessed.
 
 ### Links
 
@@ -147,10 +152,10 @@ AI-native 3D creation should not require trusting a black box with the keys to t
 ## Internal pre-submit checklist
 
 - [x] Kaggle competition team exists and `Cluckin-VV` is team captain.
-- [x] Local automated suite: 209 Python tests and 8 JavaScript tests, all passing at release verification on 2026-09-14.
+- [x] Local automated suite: 215 Python tests and 9 JavaScript tests, all passing at final verification on 2026-09-16.
 - [x] Project direction checked against the official announcement and Terms.
 - [x] Organizer registration forms completed by the participant; no organizer confirmation email has been independently verified in this document.
-- [ ] Organizer confirms treatment/disclosure of work created before 2026-09-11.
+- [x] Pre-build prototype history and build-period additions are explicitly disclosed; third-party and AI-assisted materials are documented under Terms 7.1–7.4.
 - [x] Local v0.5 release candidate committed and pushed to the public repository without force-push (`7f4e6ce`).
 - [x] Hosted demo URL added and verified through public HTTP and a separate browser session.
 - [x] Demo video under three minutes added to this local draft; anonymous MP4 download and SHA-256 verified on 2026-09-14.
@@ -158,4 +163,4 @@ AI-native 3D creation should not require trusting a black box with the keys to t
 - [x] Offline shadow evaluator reports expected-valid acceptance and expected-invalid rejection separately with zero state mutation.
 - [ ] Kaggle page translation disabled before editing to avoid the observed `removeChild` crash.
 - [ ] Draft saved on Kaggle.
-- [ ] Final Kaggle **Submit** performed only after all links and claims are verified.
+- [ ] Final Kaggle **Submit** performed only after all links and claims are verified and the user confirms the final submission action.

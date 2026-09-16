@@ -117,7 +117,7 @@ POST /command
 
 ## Hackathon status
 
-This repository is preparing for the AI Builder Hackathon 2026. Kaggle participation was previously recorded as confirmed, the v0.5 browser demo has passed public acceptance, and a 2:12 English-captioned public video is available in the `v0.5.0-rc.1` prerelease. The submission writeup remains a draft. Organizer eligibility/disclosure confirmation, Kaggle video-link compatibility and final Kaggle submission are still outstanding. Public deployment is not proof of completed competition submission.
+This repository is preparing for the AI Builder Hackathon 2026. Kaggle participation was previously recorded as confirmed, the v0.5 browser demo has passed public acceptance, and a 2:12 English-captioned public video is available in the `v0.5.0-rc.1` prerelease. The submission writeup is a final candidate but has not been submitted. Pre-build prototype history, build-period additions, third-party dependencies and AI assistance are explicitly disclosed. Kaggle video-field compatibility, the online form and final Kaggle submission remain outstanding. Public deployment is not proof of completed competition submission.
 
 See [docs/hackathon-prototype-v0.4.md](docs/hackathon-prototype-v0.4.md) for the rules-fit audit and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency provenance.
 
