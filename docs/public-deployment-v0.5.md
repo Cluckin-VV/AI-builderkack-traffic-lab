@@ -77,7 +77,7 @@ Verified 2026-09-14 before commit and deployment:
 
 The local health check was started before the candidate commit, so its Git field still showed base `98661c5`; the source fingerprint already covered the candidate files. The candidate was subsequently committed as `7f4e6ce` and synchronized to GitHub with an exact tree and commit SHA. Render deployed the later documentation commit `038a9ef` with the same business source fingerprint.
 
-The capacity consistency fix was later committed as `de6cc52`; documentation closure advanced `main` to `5560a2c`. The final public runtime identity above proves that Render deployed this exact main commit.
+The capacity consistency fix was later committed as `de6cc52`; documentation closure advanced `main` to `5560a2c`. The final public runtime identity above proves that Render deployed this exact business tree. Later documentation-only commits do not change the tested runtime and do not require another deployment.
 
 ## Rollback
 
