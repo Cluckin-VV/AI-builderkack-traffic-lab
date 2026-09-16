@@ -1,5 +1,6 @@
 // Browser-local, deterministic simulation. Never writes server SceneState.
 export const STOP_CENTER = -16;
+export const MAX_BUSES = 12;
 const EXIT = 14;
 const STEP = 0.05;
 const SPEED = { clear: 8, rain: 5.5, snow: 3.5, fog: 4 };
@@ -16,7 +17,7 @@ export class TrafficController {
   }
 
   configure(state) {
-    const count = Math.max(0, Math.min(12, Math.trunc(state.buses ?? state.bus_count ?? 0)));
+    const count = Math.max(0, Math.min(MAX_BUSES, Math.trunc(state.buses ?? state.bus_count ?? 0)));
     while (this.vehicles.length < count) {
       const id = this.vehicles.length;
       this.vehicles.push({ id, route: id % 4, s: -30 - Math.floor(id / 4) * 14, reason: 'ready' });

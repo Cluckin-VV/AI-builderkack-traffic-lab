@@ -27,6 +27,7 @@ const reasons = {
   UNKNOWN_ACTION_TYPE: "当前动作协议不认识这条表达，场景保持不变。",
   SEMANTIC_TARGET_NOT_FOUND: "动作格式正确，但场景里没有可以操作的公交车。",
   SEMANTIC_INVALID_STATE_TRANSITION: "动作格式正确，但目标已经处于该状态。",
+  SEMANTIC_CAPACITY_REACHED: "场景最多支持 12 辆公交车；本次动作已拒绝，场景保持不变。",
   INVALID_ENUM: "参数值不在协议允许范围内，场景保持不变。",
   INVALID_TYPE: "候选动作结构类型错误，场景保持不变。",
   "unknown action_type": "当前动作协议不认识这条表达，场景保持不变。",

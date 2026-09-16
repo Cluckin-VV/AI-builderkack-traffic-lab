@@ -3,7 +3,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.m
 const { createAtmosphere, createCity, batchStaticCity, loadBusAsset } = await import(
   new URL("./urban-world.js" + new URL(import.meta.url).search, import.meta.url).href
 );
-const { TrafficController } = await import(new URL("./traffic-controller.mjs" + new URL(import.meta.url).search, import.meta.url).href);
+const { TrafficController, MAX_BUSES } = await import(new URL("./traffic-controller.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { WeatherView } = await import(new URL("./weather-view.js" + new URL(import.meta.url).search, import.meta.url).href);
 const DEFAULT_CAMERA = { radius: 43, theta: 1.1, phi: 1.35 };
 
@@ -162,7 +162,7 @@ export class TransitWorld {
   }
 
   setBusCount(count) {
-    const desired = Math.max(0, Math.min(Number(count) || 0, 12));
+    const desired = Math.max(0, Math.min(Number(count) || 0, MAX_BUSES));
     while (this.buses.length < desired) {
       this.buses.push(this.createBus(this.buses.length));
     }

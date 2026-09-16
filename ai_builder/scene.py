@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 SCENE_ACTION_PROTOCOL_VERSION = "0.2"
 SCENE_ACTION_TYPES = {"add_bus", "remove_bus", "set_traffic_light", "stop_bus", "move_bus", "set_weather"}
+MAX_BUSES = 12
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,8 @@ def validate_scene_action_schema(payload: Any) -> List[ValidationError]:
 
 def validate_scene_action_semantics(action: "SceneAction", state: "SceneState") -> List[ValidationError]:
     """Validate whether an otherwise well-shaped action can execute now."""
+    if action.action_type == "add_bus" and state.buses >= MAX_BUSES:
+        return [ValidationError("SEMANTIC_CAPACITY_REACHED", f"The scene supports at most {MAX_BUSES} buses", "target")]
     if action.action_type in {"remove_bus", "stop_bus", "move_bus"} and state.buses == 0:
         return [ValidationError("SEMANTIC_TARGET_NOT_FOUND", "No bus exists in the scene", "target")]
     if action.action_type == "stop_bus" and state.bus_running is False:
@@ -81,6 +84,8 @@ class SceneState:
         if validation is None or validation.status != "accepted" or validation.action_id != action.action_id:
             raise ValueError("SceneState 只能接受经过 Validator 的 SceneAction")
         if action.action_type == "add_bus":
+            if self.buses >= MAX_BUSES:
+                raise ValueError(f"公交车容量上限为 {MAX_BUSES}")
             self.buses += 1
         elif action.action_type == "remove_bus":
             self.buses -= 1
@@ -192,6 +197,7 @@ class Validator:
         if action.target != self._TARGETS[action.action_type]: return ValidationResult("rejected", "unknown target", action.action_id)
         if set(action.parameters) != self._PARAMETERS[action.action_type]: return ValidationResult("rejected", "unknown parameters", action.action_id)
         if action.action_type == "set_traffic_light" and (not isinstance(action.parameters["color"], str) or action.parameters["color"] not in self._COLORS): return ValidationResult("rejected", "illegal color", action.action_id)
+        if action.action_type == "add_bus" and state.buses >= MAX_BUSES: return ValidationResult("rejected", "bus capacity reached", action.action_id)
         if action.action_type in {"remove_bus", "stop_bus", "move_bus"} and state.buses == 0: return ValidationResult("rejected", "no bus exists", action.action_id)
         if action.action_type == "set_weather" and (not isinstance(action.parameters["weather"], str) or action.parameters["weather"] not in {"clear", "rain", "snow", "fog"}): return ValidationResult("rejected", "illegal weather", action.action_id)
         return ValidationResult("accepted", "valid", action.action_id)

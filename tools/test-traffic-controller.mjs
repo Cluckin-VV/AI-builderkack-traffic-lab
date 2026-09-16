@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TrafficController, STOP_CENTER } from '../ai_builder/static/traffic-controller.mjs';
+import { MAX_BUSES, TrafficController, STOP_CENTER } from '../ai_builder/static/traffic-controller.mjs';
 
 const config = { buses: 4, bus_running: true, traffic_light: '绿灯', weather: 'clear' };
 function tick(controller, seconds) {
@@ -74,4 +74,9 @@ test('snapshot cannot mutate simulation', () => {
   const c = create();
   c.snapshot().vehicles[0].s = 999;
   assert.equal(c.snapshot().vehicles[0].s, -30);
+});
+test('vehicle capacity is explicit and enforced', () => {
+  const c = create({ buses: MAX_BUSES + 1 });
+  assert.equal(MAX_BUSES, 12);
+  assert.equal(c.snapshot().vehicles.length, MAX_BUSES);
 });

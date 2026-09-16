@@ -87,6 +87,8 @@ Try:
 - `让天气起雾`
 - `恢复晴天`
 
+The scene capacity is 12 buses. A request for a thirteenth bus is rejected during semantic validation, before `SceneState.apply`, so server state, browser simulation and rendered vehicle count remain consistent. Removing a bus frees one capacity slot.
+
 Unsupported or combined requests are rejected without changing state, for example:
 
 - `让天气下陨石`
@@ -129,6 +131,7 @@ See [docs/hackathon-prototype-v0.4.md](docs/hackathon-prototype-v0.4.md) for the
 - the demo depends on a CDN-hosted Three.js module;
 - the free Render instance may cold-start after inactivity;
 - all visitors to one server instance share process-local demo state.
+- the current scene intentionally supports at most 12 buses; the validator rejects additions beyond that capacity.
 
 ## License and provenance
 
