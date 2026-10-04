@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AtmosphereTransition, qualityProfile, CAMERA_PROFILES, architecturalLightLevel } from '../ai_builder/static/atmosphere-profile.mjs';
+import { AtmosphereTransition, LightingTransition, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, architecturalLightLevel } from '../ai_builder/static/atmosphere-profile.mjs';
 
 test('weather changes blend rather than jumping on confirmation', () => {
   const blend = new AtmosphereTransition();
@@ -60,4 +60,35 @@ test('named cameras have immutable finite metre-scale poses', () => {
     assert.ok(profile.target.every(Number.isFinite));
   }
   assert.ok(CAMERA_PROFILES.street.radius > 40);
+});
+
+test('lighting changes start at the current appearance and converge without a jump', () => {
+  const light=new LightingTransition(); light.set('blue');
+  assert.equal(light.advance(0).blue,0);
+  assert.ok(light.advance(1/60).blue>0 && light.weights.blue<.05);
+  assert.equal(light.settled,false);
+  for(let i=0;i<480;i++)light.advance(1/60);
+  assert.ok(light.weights.blue>.999); assert.equal(light.settled,true);
+});
+test('interrupted lighting changes stay normalised and preserve the current appearance', () => {
+  const light=new LightingTransition();light.set('golden');light.advance(.1);
+  const before={...light.weights};light.set('blue');
+  assert.deepEqual(light.advance(0),before);
+  for(const style of ['blue','golden','daylight']){
+    light.set(style);for(let i=0;i<7;i++)light.advance(.016);
+    assert.ok(Object.values(light.weights).every(x=>x>=0&&x<=1));
+    assert.ok(Math.abs(Object.values(light.weights).reduce((a,b)=>a+b)-1)<1e-10);
+  }
+});
+test('invalid time cannot corrupt lighting and background intervals are bounded', () => {
+  const light=new LightingTransition();light.set('blue');
+  for(const seconds of [NaN,Infinity,-1])assert.equal(light.advance(seconds).blue,0);
+  assert.ok(light.advance(30).blue<.2);
+  light.set('missing');assert.equal(light.target,'blue');
+});
+test('fog follows continuous dusk lighting instead of keeping daylight brightness', () => {
+  assert.equal(lightingFogBrightness(0),1);
+  assert.equal(lightingFogBrightness(1),.35);
+  assert.ok(lightingFogBrightness(.5)>.35&&lightingFogBrightness(.5)<1);
+  assert.equal(lightingFogBrightness(NaN),1);
 });

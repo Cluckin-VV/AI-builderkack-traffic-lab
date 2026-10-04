@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
-const { AtmosphereTransition, qualityProfile, architecturalLightLevel } = await import(new URL(
+const { AtmosphereTransition, LightingTransition, lightingFogBrightness, qualityProfile, architecturalLightLevel } = await import(new URL(
   './atmosphere-profile.mjs' + new URL(import.meta.url).search, import.meta.url).href);
 
 // Presentation only: reads weather configuration and animates pixels; never writes SceneState.
@@ -8,6 +8,7 @@ export class WeatherView {
     this.world = world;
     this.weather = "clear";
     this.transition = new AtmosphereTransition();
+    this.lighting = new LightingTransition();
     this.time = 0;
     this.lightStyle = 'daylight';
     this.environmentWeather = 'clear';
@@ -84,12 +85,14 @@ export class WeatherView {
   setLightStyle(style) {
     if (!['daylight','golden','blue'].includes(style)) return;
     this.lightStyle=style;
+    this.lighting.set(style);
     this.world.container.dataset.lightStyle=style;
-    this.environmentWeather=null;
+    this.world.container.dataset.lightingTransition=this.lighting.settled?'settled':'blending';
   }
 
   applyAtmosphere(seconds) {
     const view=this.transition.advance(seconds);
+    const lighting=this.lighting.advance(seconds);
     const weights=this.transition.weights;
     this.rain.visible = weights.rain>.001;
     this.rain.material.opacity=weights.rain*.38;
@@ -122,35 +125,42 @@ export class WeatherView {
       }
     };
     blendColor(0,this.world.scene.background);
-    this.world.scene.fog.color.copy(this.world.scene.background);
     this.world.scene.fog.near=Object.entries(weights).reduce((s,[n,w])=>s+palettes[n][1]*w,0);
     this.world.scene.fog.far=Object.entries(weights).reduce((s,[n,w])=>s+palettes[n][2]*w,0);
     const uniforms=this.world.sky.material.uniforms;
     blendColor(5,uniforms.top.value);blendColor(6,uniforms.bottom.value);
     blendColor(7,this.world.groundMaterial.color);
-    const blue=this.lightStyle==='blue', golden=this.lightStyle==='golden';
-    this.world.sun.position.set(-35,blue?12:golden?19:48,25);
-    this.world.sun.color.set(blue?0xb2caff:golden?0xffc18a:0xfff1dc);
-    this.world.sun.intensity=view.sun*(blue?.25:golden?.8:1);
-    this.world.hemisphere.color.set(blue?0x94b1da:0xd7e5f2);
+    const blue=lighting.blue, golden=lighting.golden;
+    this.world.scene.background.multiplyScalar(lightingFogBrightness(blue));
+    this.world.scene.fog.color.copy(this.world.scene.background);
+    this.world.sun.position.set(-35,48-36*blue-29*golden,25);
+    this.world.sun.color.set(0xfff1dc).multiplyScalar(lighting.daylight)
+      .add(this.blendedColor.set(0xffc18a).multiplyScalar(golden))
+      .add(this.blendedColor.set(0xb2caff).multiplyScalar(blue));
+    this.world.sun.intensity=view.sun*(1-.75*blue-.2*golden);
+    this.world.hemisphere.color.set(0xd7e5f2).lerp(this.blendedColor.set(0x94b1da),blue);
     this.world.hemisphere.groundColor.set(0x6f7474);
-    this.world.hemisphere.intensity=view.ambient*(blue?.62:1);
+    this.world.hemisphere.intensity=view.ambient*(1-.38*blue);
     uniforms.clouds.value=view.clouds;uniforms.time.value=this.time;
     uniforms.sunDirection.value.copy(this.world.sun.position).normalize();
     uniforms.sunColor.value.copy(this.world.sun.color);
-    uniforms.sunStrength.value=(1-view.clouds)*(blue?.18:1);
-    if(blue) {uniforms.top.value.multiplyScalar(.42);uniforms.bottom.value.set(0x7e93b2);}
-    else if(golden) uniforms.bottom.value.lerp(this.blendedColor.set(0xf0c8a7),weights.clear*.55);
-    this.world.scene.environmentIntensity=blue?.45:.72;
+    uniforms.sunStrength.value=(1-view.clouds)*(1-.82*blue);
+    uniforms.top.value.multiplyScalar(1-.58*blue);
+    uniforms.bottom.value.lerp(this.blendedColor.set(0xf0c8a7),weights.clear*.55*golden)
+      .lerp(this.blendedColor.set(0x7e93b2),blue);
+    this.world.scene.environmentIntensity=.72-.27*blue;
     this.world.renderer.toneMappingExposure=view.exposure;
     this.world.roadMaterial.color.set(0x7b858d).multiplyScalar(1-view.wet*.25);
     this.world.roadMaterial.roughness=.74-view.wet*.40;
-    for(const light of this.world.streetLights??[]) light.intensity=14*Math.max(view.lamp,blue?1:golden?.5:0);
+    for(const light of this.world.streetLights??[]) light.intensity=14*Math.max(view.lamp,blue+golden*.5);
     for(const material of this.world.architecturalLights??[])
-      material.emissiveIntensity=architecturalLightLevel(view.lamp,this.lightStyle);
+      material.emissiveIntensity=Object.entries(lighting).reduce((sum,[style,weight])=>
+        sum+weight*architecturalLightLevel(view.lamp,style),0);
     this.world.container.dataset.atmosphereTransition=weights[this.weather]>.998?'settled':'blending';
-    if(weights[this.weather]>.998 && this.environmentWeather!==this.weather) {
-      this.environmentWeather=this.weather;
+    this.world.container.dataset.lightingTransition=this.lighting.settled?'settled':'blending';
+    const environmentKey=this.weather+':'+this.lightStyle;
+    if(weights[this.weather]>.998 && this.lighting.settled && this.environmentWeather!==environmentKey) {
+      this.environmentWeather=environmentKey;
       this.world.refreshEnvironment?.();
     }
   }

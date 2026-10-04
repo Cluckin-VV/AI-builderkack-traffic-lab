@@ -29,6 +29,34 @@ export function architecturalLightLevel(weatherLamp, style = 'daylight') {
   return .015 + .68 * Math.max(lamp * .45, dusk);
 }
 
+export function lightingFogBrightness(blueWeight) {
+  const blue = Number.isFinite(blueWeight) ? Math.max(0, Math.min(1, blueWeight)) : 0;
+  return 1 - .65 * blue;
+}
+
+export class LightingTransition {
+  constructor() {
+    this.target='daylight';
+    this.weights={daylight:1,golden:0,blue:0};
+  }
+  set(style) {
+    if(Object.hasOwn(this.weights,style))this.target=style;
+  }
+  get settled() { return this.weights[this.target]>.998; }
+  advance(seconds) {
+    const delta=Number.isFinite(seconds)?Math.max(0,Math.min(seconds,.1)):0;
+    const alpha=1-Math.exp(-delta*1.4);
+    for(const key of Object.keys(this.weights)) {
+      const target=key===this.target?1:0;
+      this.weights[key]+=(target-this.weights[key])*alpha;
+      if(Math.abs(this.weights[key]-target)<.0001)this.weights[key]=target;
+    }
+    const total=Object.values(this.weights).reduce((a,b)=>a+b,0);
+    for(const key of Object.keys(this.weights))this.weights[key]/=total;
+    return {...this.weights};
+  }
+}
+
 export class AtmosphereTransition {
   constructor(weather = 'clear') {
     this.target = WEATHER_PROFILES[weather] ? weather : 'clear';
