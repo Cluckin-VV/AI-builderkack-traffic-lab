@@ -135,3 +135,26 @@ visible before switching quality. Final console: zero errors and warnings.
 The 10-minute run above predates this UI-only fix and used fingerprint
 `993af5e7ccdf`; no renderer, shader or simulation code changed afterward.
 It must not be misreported as a second 10-minute run on the final fingerprint.
+
+## Published verification
+
+- Source commit: `8580b810fe5c46e8e8d6d9a739bf8d302f275537`, normal Git push succeeded.
+- Existing Render free service, deployment `dep-db1biop42hec73etdc30`:
+  confirmed `live`, finished 2026-10-04 20:40:14 UTC. No new service or paid API.
+- Public `/health`: app `0.8.0`, command protocol `0.3`, SceneAction `0.3`,
+  fingerprint `7bb6e09fd7ee`, git commit `8580b81`, started at
+  `2026-10-04T20:40:11.477808+00:00`.
+- The public headed browser displayed the same fingerprint. Immersive preview,
+  cancellation, confirmation and undo regression passed again against public UI.
+- Public rain/clear UI check passed: rain wetness 0.984, clear-after-rain 0.758;
+  cancelling the clear preview preserved rain. Actual browser screenshots
+  `public-rain-surface-dusk.png` and `public-rain-surface-after-rain.png`
+  were visually inspected. Browser console: zero errors and warnings.
+- Public acceptance ran at 1920x1080 viewport with 12 vehicles. Screenshot HUD
+  samples were 48 and 51 FPS; these short samples are not the local 24-vehicle
+  immersive benchmark above and must not be presented as a public locked-60 test.
+- Render error-log retrieval failed with a connector transport error. Deployment
+  status and HTTP/browser checks succeeded independently; server logs remain
+  unverified rather than being declared clean.
+- This publication record is documentation only and does not require another
+  deployment. Near-field asset realism and lower-end performance remain open.
