@@ -36,36 +36,97 @@
 
   <main class="workspace">
     <section class="control-rail" aria-labelledby="director-title">
-      <div class="section-kicker">AI SCENE DIRECTOR · BASELINE MODE</div>
+      <div class="section-kicker">AI SCENE DIRECTOR · PREVIEW-FIRST MODE</div>
       <h1 id="director-title">说出变化，<br><em>让世界响应。</em></h1>
-      <p class="intro">候选动作必须依次通过 Schema 与场景语义验证，才有资格触碰 3D 世界。</p>
+      <p class="intro">描述车流与天气，预演变化，再确认让城市响应。每一步都能解释，也能撤销。</p>
 
       <form id="command-form" class="command-form">
         <label for="prompt">你想改变什么？</label>
         <div class="prompt-shell">
           <textarea id="prompt" name="command" rows="3" maxlength="240" autocomplete="off"
-            placeholder="例如：场景里来一辆公交车"></textarea>
+            placeholder="例如：添加两辆 SUV，切换雨天"></textarea>
           <div class="prompt-meta">
             <span id="character-count">0 / 240</span>
             <kbd>Ctrl</kbd><span>+</span><kbd>Enter</kbd>
           </div>
         </div>
         <button id="submit-command" class="primary-action" type="submit">
-          <span>构建场景</span>
+          <span>生成并预演</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
         </button>
       </form>
 
+      <section id="plan-preview" class="plan-preview" aria-labelledby="plan-preview-title" hidden>
+        <div class="plan-preview-heading">
+          <div>
+            <span>VALIDATED SCENE PLAN</span>
+            <h2 id="plan-preview-title">执行前预览</h2>
+          </div>
+          <b id="plan-step-count">0 STEPS</b>
+        </div>
+        <ol id="plan-steps"></ol>
+        <p id="plan-projection"></p>
+        <div class="plan-actions">
+          <button id="cancel-plan" type="button">取消</button>
+          <button id="confirm-plan" type="button">确认执行全部动作</button>
+        </div>
+      </section>
+
+      <section class="editor-card" aria-labelledby="editor-title">
+        <div class="examples-heading">
+          <h2 id="editor-title">场景结构编辑器</h2>
+          <span>目标配置 · 预演后提交</span>
+        </div>
+        <form id="scene-editor-form" class="scene-editor-form">
+          <label>布局
+            <select id="editor-layout">
+              <option value="crossroads">Nexus 十字路口</option>
+              <option value="bus_stop">Central Exchange 公交站</option>
+            </select>
+          </label>
+          <label>小轿车 / 跑车
+            <input id="editor-sedans" type="number" min="0" max="24" value="6">
+          </label>
+          <label>SUV
+            <input id="editor-suvs" type="number" min="0" max="24" value="4">
+          </label>
+          <label>公交车
+            <input id="editor-buses" type="number" min="0" max="24" value="2">
+          </label>
+          <label>天气
+            <select id="editor-weather">
+              <option value="clear">晴</option><option value="rain">雨</option>
+              <option value="snow">雪</option><option value="fog">雾</option>
+            </select>
+          </label>
+          <label>信号灯请求（高级安全覆盖）
+            <select id="editor-light">
+              <option value="绿灯">EW 直行绿灯（其余全红）</option>
+              <option value="黄灯">全向黄灯警示（停止线停车、路口内清空）</option>
+              <option value="红灯">全红停车</option>
+            </select>
+          </label>
+          <div class="signal-mode-note">
+            <span>交通控制</span>
+            <strong id="signal-mode-description">自动分相 · 右侧通行</strong>
+            <button id="resume-auto-signal" type="button" disabled title="生成并确认一个恢复自动信号的安全计划">恢复自动信号</button>
+          </div>
+          <button class="secondary-action" type="submit">生成配置预演</button>
+        </form>
+        <small class="editor-note">车辆仅在批准的车道与信号相位内行驶。编辑器只生成 ScenePlan；预演失败或取消不会改动场景。</small>
+      </section>
+
       <div class="examples">
         <div class="examples-heading">
           <h2>试试这些指令</h2>
-          <span>单动作协议</span>
+          <span>可组合动作协议</span>
         </div>
         <div class="prompt-list">
-          <button type="button" data-command="增加一辆公交车"><b>01</b><span>增加一辆公交车</span><i>ADD</i></button>
-          <button type="button" data-command="把信号灯改成红色"><b>02</b><span>把信号灯改成红色</span><i>LIGHT</i></button>
-          <button type="button" data-command="让公交车停下"><b>03</b><span>让公交车停下</span><i>STOP</i></button>
-          <button type="button" data-command="让公交车继续行驶"><b>04</b><span>让公交车继续行驶</span><i>MOVE</i></button>
+          <button type="button" data-command="添加三辆小轿车和一辆公交车"><b>01</b><span>添加三辆小轿车和一辆公交车</span><i>BUILD</i></button>
+          <button type="button" data-command="恢复十字路口"><b>↩</b><span>恢复十字路口（保留车辆和天气）</span><i>LAYOUT</i></button>
+          <button type="button" data-command="增加一辆公交车"><b>02</b><span>增加一辆公交车</span><i>ADD</i></button>
+          <button type="button" data-command="增加两辆SUV"><b>03</b><span>增加两辆 SUV</span><i>ADD</i></button>
+          <button type="button" data-command="让公交车停下"><b>04</b><span>让公交车停下</span><i>STOP</i></button>
           <button type="button" data-command="删除一辆公交车"><b>05</b><span>删除一辆公交车</span><i>REMOVE</i></button>
           <button type="button" data-command="让天气下暴雪"><b>06</b><span>让天气下暴雪</span><i>WEATHER</i></button>
           <button class="boundary-prompt" type="button" data-command="让天气下陨石"><b>07</b><span>让天气下陨石</span><i>REJECT</i></button>
@@ -84,6 +145,9 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
             <span>暂停动画</span>
           </button>
+          <button id="undo-last" type="button" disabled title="预演并撤销最近一次已确认修改">撤销上次修改</button>
+          <button id="camera-mode" type="button" aria-pressed="false" title="切换斜俯视与街景机位">街景视角</button>
+          <button id="corner-camera" type="button" aria-pressed="false" title="观察沿街立面、店面和街角细节；不改变场景状态">街角近景</button>
           <button id="immersive-view" type="button" aria-pressed="false">沉浸场景</button>
           <button id="reset-camera" type="button">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"/></svg>
@@ -92,32 +156,58 @@
         </div>
       </header>
 
+      <div class="look-toolbar" aria-label="场景画面设置">
+        <div class="light-styles" role="group" aria-label="光照风格，仅影响画面">
+          <button type="button" data-light-style="daylight" aria-pressed="true">自然日光</button>
+          <button type="button" data-light-style="golden" aria-pressed="false">金色时刻</button>
+          <button type="button" data-light-style="blue" aria-pressed="false">暮色</button>
+        </div>
+        <label class="quality-control" for="render-quality">画质
+          <select id="render-quality">
+            <option value="low">流畅</option>
+            <option value="balanced" selected>均衡</option>
+            <option value="high">精细</option>
+          </select>
+        </label>
+        <output id="render-performance" class="render-performance" title="实测帧率，每秒更新；不包含帧生成">测量中</output>
+      </div>
+
       <div id="viewport" class="viewport" tabindex="0" aria-label="可交互 3D 交通场景。拖动旋转，滚轮缩放。">
         <div id="scene-root" class="scene-root"></div>
+        <div id="preview-badge" class="preview-badge" hidden>预演视图 · 尚未提交</div>
         <div id="webgl-fallback" class="webgl-fallback" hidden>
           <strong>无法启动 WebGL 场景</strong>
           <span>请启用浏览器硬件加速后刷新页面。</span>
         </div>
         <div class="viewport-vignette" aria-hidden="true"></div>
+        <div class="scene-caption" aria-hidden="true"><span>TRANSITLAB / NEXUS</span><strong id="atmosphere-caption">日光下的城市</strong></div>
         <div class="scene-status">
-          <span class="coordinate">东西 EW ↔ · 南北 NS ↕</span>
+          <span class="coordinate">自动信号 · 黄灯过渡 · 全红清空 · 右侧通行</span>
           <span class="camera-help">拖动旋转 · 滚轮缩放</span>
         </div>
         <div class="scene-telemetry" aria-label="场景实时状态">
-          <div><span>公交车</span><strong id="bus-count">0</strong></div>
-          <div><span>车辆实况</span><strong id="motion-state">等待车辆</strong></div>
-          <div><span>路口相位</span><strong id="light-state">EW 绿 · NS 红</strong></div>
+          <div><span>车辆总数</span><strong id="bus-count">0</strong></div>
+          <div><span>车辆实况</span><strong id="motion-state" aria-live="polite">等待车辆</strong></div>
+          <div><span id="signal-label">信号相位</span><strong id="light-state" aria-live="polite">EW 绿 · NS 红</strong></div>
           <div><span>天气</span><strong id="weather-state">晴</strong></div>
         </div>
         <div id="command-status" class="command-status is-ready" role="status" aria-live="polite">
           <span class="status-symbol" aria-hidden="true">●</span>
-          <span id="status-text">系统就绪，等待指令</span>
+          <span id="status-text" aria-live="polite">系统就绪，等待指令</span>
         </div>
+      </div>
+
+      <div class="weather-shortcuts" role="group" aria-label="天气变化，先预演再确认">
+        <span>天气情景 <small>预演后确认</small></span>
+        <button type="button" data-command="恢复晴天">晴天</button>
+        <button type="button" data-command="切换雨天">雨天</button>
+        <button type="button" data-command="下雪">飘雪</button>
+        <button type="button" data-command="切换雾天">薄雾</button>
       </div>
 
       <ol id="pipeline" class="pipeline" aria-label="动作验证流水线">
         <li data-stage="candidate"><span>01</span><div><b>Candidate</b><small>ModelAdapter</small></div><i></i></li>
-        <li data-stage="schema"><span>02</span><div><b>Schema</b><small>Protocol v0.2</small></div><i></i></li>
+        <li data-stage="schema"><span>02</span><div><b>Schema</b><small>Protocol v0.3</small></div><i></i></li>
         <li data-stage="semantic"><span>03</span><div><b>Semantic</b><small>Scene rules</small></div><i></i></li>
         <li data-stage="execution"><span>04</span><div><b>Execution</b><small>State.apply</small></div><i></i></li>
       </ol>
@@ -138,9 +228,10 @@
           <span>READ ONLY VIEW</span>
         </div>
         <dl>
-          <div><dt>bus_count</dt><dd id="state-buses">0</dd></div>
-          <div><dt>bus_running</dt><dd id="state-running">true</dd></div>
-          <div><dt>traffic_light</dt><dd id="state-light">绿灯</dd></div>
+          <div><dt>vehicle_count</dt><dd id="state-buses">0</dd></div>
+          <div><dt>fleet_mix</dt><dd id="state-fleet">轿车 0 · SUV 0 · 公交 0</dd></div>
+          <div><dt>signal_mode</dt><dd id="state-signal-mode">automatic</dd></div>
+          <div><dt>signal_phase</dt><dd id="state-light">EW_THROUGH</dd></div>
           <div><dt>weather</dt><dd id="state-weather">clear</dd></div>
         </dl>
       </section>
@@ -148,7 +239,7 @@
       <section class="action-panel" aria-labelledby="action-title">
         <div class="panel-heading">
           <h3 id="action-title">SceneAction</h3>
-          <span id="action-protocol">v0.2</span>
+          <span id="action-protocol">v0.3</span>
         </div>
         <div id="empty-action" class="empty-action">
           <span aria-hidden="true">⌁</span>
@@ -159,7 +250,7 @@
           <div><dt>validation_stage</dt><dd id="validation-stage">—</dd></div>
           <div><dt>action_id</dt><dd id="action-id">—</dd></div>
         </dl>
-        <p id="explanation" class="explanation">场景只会响应经过双层验证的单一动作。</p>
+        <p id="explanation" class="explanation">计划中的每个动作必须经过双层验证；预演成功并确认后才提交。</p>
       </section>
 
       <section class="history-panel" aria-labelledby="history-title">
@@ -180,8 +271,8 @@
   </main>
 
   <footer class="footer">
-    <span>Deterministic baseline · Real LLM remains shadow-only</span>
-    <span>Three.js r180 · Blender bus · AI asphalt texture</span>
+    <span>Preview-first ScenePlan · Real LLM remains shadow-only</span>
+    <span>Three.js r180 · Original Blender sedan / SUV / bus</span>
     <span>Started At {{started_at}}</span>
   </footer>
 </body>

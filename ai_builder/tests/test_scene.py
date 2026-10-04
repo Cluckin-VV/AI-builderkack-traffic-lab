@@ -46,7 +46,7 @@ class ScenePipelineTests(unittest.TestCase):
     def test_two_legal_commands_update_one_state(self):
         render_command("增加一辆公交车", self.state, self.log)
         render_command("把信号灯变成红灯", self.state, self.log)
-        self.assertEqual(self.state.snapshot(), {"buses": 1, "traffic_light": "红灯", "bus_running": True, "weather": "clear"})
+        self.assertEqual(self.state.snapshot(), {"buses": 1, "traffic_light": "红灯", "bus_running": True, "weather": "clear", "signal_mode": "manual"})
 
     def test_event_log_explains_command_action_validation_and_state_change(self):
         render_command("增加一辆公交车", self.state, self.log)
@@ -77,7 +77,10 @@ class ScenePipelineTests(unittest.TestCase):
     def test_renderer_exposes_read_only_3d_scene_data(self):
         result = render_command("增加一辆公交车", self.state, self.log)
         self.assertEqual(result["scene"]["projection"], "perspective")
-        self.assertEqual(result["scene"]["road"], {"layout": "crossroads", "approaches": 4, "lanes_per_road": 2, "length": 160})
+        self.assertEqual(result["scene"]["road"]["layout"], "crossroads")
+        self.assertEqual(result["scene"]["road"]["approaches"], 4)
+        self.assertEqual(result["scene"]["road"]["lanes_per_direction"], 3)
+        self.assertEqual(result["scene"]["road"]["width"], 30)
         self.assertEqual(result["scene"]["bus_count"], 1)
         self.assertEqual(result["scene"]["traffic_light"], "绿灯")
 

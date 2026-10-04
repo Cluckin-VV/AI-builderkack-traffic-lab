@@ -15,19 +15,31 @@ class RealLLMAdapter:
         raise NotImplementedError
 
 class OpenAIRealLLMAdapter(RealLLMAdapter):
-    def __init__(self, api_key=None, model=None, endpoint="https://api.openai.com/v1/responses", timeout=20, opener=None):
+    def __init__(self, api_key=None, model=None, endpoint="https://api.openai.com/v1/responses", timeout=20, opener=None, schema=None, instructions=None, schema_name="scene_action_v02"):
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.model = model or os.getenv("AI_BUILDER_LLM_MODEL", "gpt-4o-mini")
         self.endpoint, self.timeout, self.opener = endpoint, timeout, opener or urllib.request.urlopen
+        self.schema = ACTION_SCHEMA if schema is None else schema
+        self.instructions = SYSTEM_INSTRUCTIONS if instructions is None else instructions
+        self.schema_name = schema_name
+        self.last_usage = {}
+        self.last_raw_output = None
 
     def generate_scene_action(self, command, request_id=None):
+        self.last_usage = {}
+        self.last_raw_output = None
         if os.getenv("AI_BUILDER_ENABLE_REAL_LLM", "0") != "1": return {"ok":False,"error_category":"CONFIG_ERROR","message":"real LLM is disabled","diagnostic":{"response_received":False}}
         if not self.api_key: return {"ok":False,"error_category":"CONFIG_ERROR","message":"OPENAI_API_KEY is not configured","diagnostic":{"response_received":False}}
-        body={"model":self.model,"store":False,"instructions":SYSTEM_INSTRUCTIONS,"input":command,"text":{"format":{"type":"json_schema","name":"scene_action_v02","strict":True,"schema":ACTION_SCHEMA}}}
+        body={"model":self.model,"store":False,"instructions":self.instructions,"input":command,"text":{"format":{"type":"json_schema","name":self.schema_name,"strict":True,"schema":self.schema}}}
         request=urllib.request.Request(self.endpoint,data=json.dumps(body,ensure_ascii=False).encode(),headers={"Authorization":"Bearer "+self.api_key,"Content-Type":"application/json"},method="POST")
         try:
             with self.opener(request, timeout=self.timeout) as response:
                 data=json.loads(response.read().decode())
+            if not isinstance(data, dict):
+                return {"ok":False,"error_category":"MALFORMED_RESPONSE","message":"provider envelope is not an object","diagnostic":{"response_received":True}}
+            usage = data.get("usage")
+            if isinstance(usage, dict):
+                self.last_usage = {name: value for name, value in usage.items() if name in {"input_tokens", "output_tokens", "total_tokens"} and isinstance(value, int) and value >= 0}
             if data.get("status") == "failed" or data.get("error"):
                 return {"ok":False,"error_category":"API_ERROR","message":"provider response reported failure","diagnostic":{"response_received":True,"openai_error_type":_safe(data.get("error",{}).get("type")),"openai_error_code":_safe(data.get("error",{}).get("code")),"message_sanitized":_safe(data.get("error",{}).get("message"))}}
             text=data.get("output_text")
@@ -38,6 +50,8 @@ class OpenAIRealLLMAdapter(RealLLMAdapter):
                         if content.get("type") == "refusal": return {"ok":False,"error_category":"MODEL_REFUSAL","message":"model refusal","diagnostic":{"response_received":True}}
                         if content.get("type") in {"output_text","text"}: text=content.get("text"); break
             if not text: return {"ok":False,"error_category":"MALFORMED_RESPONSE","message":"no structured output","diagnostic":{"response_received":True}}
+            if not isinstance(text, str): return {"ok":False,"error_category":"MALFORMED_RESPONSE","message":"output text is not a string","diagnostic":{"response_received":True}}
+            self.last_raw_output = text.replace(self.api_key, "[REDACTED]")[:16000]
             try: return json.loads(text)
             except json.JSONDecodeError: return {"ok":False,"error_category":"INVALID_JSON","message":"model output was not JSON","diagnostic":{"response_received":True}}
         except urllib.error.HTTPError as error:
@@ -47,6 +61,7 @@ class OpenAIRealLLMAdapter(RealLLMAdapter):
             except Exception: pass
             return {"ok":False,"error_category":"API_ERROR","message":"HTTP request failed","diagnostic":detail}
         except (socket.timeout, TimeoutError): return {"ok":False,"error_category":"TIMEOUT","message":"LLM request timed out","diagnostic":{"response_received":False}}
+        except json.JSONDecodeError: return {"ok":False,"error_category":"MALFORMED_RESPONSE","message":"provider envelope was not JSON","diagnostic":{"response_received":True}}
         except (urllib.error.URLError, OSError) as error: return {"ok":False,"error_category":"API_ERROR","message":"network request failed","diagnostic":{"response_received":False,"message_sanitized":_safe(getattr(error,"reason",error))}}
 
 def _safe(value):
@@ -70,7 +85,7 @@ def evaluate_candidate(command, candidate, state=None, reference=None, latency_m
     schema_errors=validate_scene_action_schema(candidate)
     if schema_errors: result["error_category"]="SCHEMA_FAILURE"; return result
     result["schema_valid"]=True
-    target={"add_bus":"road","remove_bus":"road","set_traffic_light":"traffic_light","stop_bus":"bus","move_bus":"bus","set_weather":"scene"}[candidate["action_type"]]
+    target={"add_bus":"road","remove_bus":"road","set_traffic_light":"traffic_light","stop_bus":"bus","move_bus":"bus","set_weather":"scene","set_scene_layout":"scene"}[candidate["action_type"]]
     action=SceneAction(candidate["action_type"],target,candidate["parameters"],command,candidate["action_id"])
     if validate_scene_action_semantics(action,state): result["error_category"]="SEMANTIC_FAILURE"; return result
     result["semantic_valid"]=True; result["action_type_match"]=reference is not None and candidate["action_type"]==reference["action_type"]; result["parameters_match"]=reference is not None and candidate["parameters"]==reference["parameters"]; result["overall_match"]=result["action_type_match"] and result["parameters_match"]

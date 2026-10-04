@@ -37,9 +37,9 @@ class RuntimeIdentityTests(unittest.TestCase):
             server.server_close()
 
     def test_page_contains_runtime_identity_labels(self):
-        self.assertIn("App v0.5.0", SceneHandler.page())
+        self.assertIn("App v0.8.0", SceneHandler.page())
         self.assertIn("Command Protocol v0.3", SceneHandler.page())
-        self.assertIn("SceneAction v0.2", SceneHandler.page())
+        self.assertIn("SceneAction v0.3", SceneHandler.page())
         self.assertIn("Build", SceneHandler.page())
         self.assertIn("Started At", SceneHandler.page())
 

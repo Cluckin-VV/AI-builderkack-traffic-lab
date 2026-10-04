@@ -1,0 +1,64 @@
+{
+  "crossroads": {
+    "name": "NEXUS CROSSING",
+    "road": {"layout": "crossroads", "approaches": 4, "lanes_per_direction": 3, "length": 160, "width": 30},
+    "junction": {
+      "units": "metres",
+      "half_width": 15,
+      "lane_width": 3.5,
+      "lane_offsets": {"left": 1.75, "straight": 5.25, "right": 8.75},
+      "stop_line_s": -20.5,
+      "crosswalk_s": -17.5,
+      "entry_s": -15,
+      "exit_s": 15,
+      "start_s": -72,
+      "wrap_s": -72,
+      "exit_approach_s": 72,
+      "approaches": {
+        "W": {"forward": [1, 0], "right": [0, -1], "axis": "EW", "pole_position": [-24, -16.5], "signal_yaw": -1.57079632679},
+        "E": {"forward": [-1, 0], "right": [0, 1], "axis": "EW", "pole_position": [24, 16.5], "signal_yaw": 1.57079632679},
+        "S": {"forward": [0, 1], "right": [1, 0], "axis": "NS", "pole_position": [16.5, -24], "signal_yaw": 3.14159265359},
+        "N": {"forward": [0, -1], "right": [-1, 0], "axis": "NS", "pole_position": [-16.5, 24], "signal_yaw": 0}
+      },
+      "signal_phases": [
+        {"name": "EW_THROUGH", "seconds": 20, "groups": ["EW_THROUGH"]},
+        {"name": "EW_LEFT", "seconds": 8, "groups": ["EW_LEFT"]},
+        {"name": "NS_THROUGH", "seconds": 20, "groups": ["NS_THROUGH"]},
+        {"name": "NS_LEFT", "seconds": 8, "groups": ["NS_LEFT"]}
+      ],
+      "yellow_seconds": 3,
+      "all_red_seconds": 2,
+      "vehicle_specs": {
+        "sedan": {"length": 4.65, "width": 2.18, "speed_factor": 1.08, "ground_offset": 0.14},
+        "suv": {"length": 4.95, "width": 2.30, "speed_factor": 0.98, "ground_offset": 0.18},
+        "bus": {"length": 9.5, "width": 3.06, "speed_factor": 0.78, "ground_offset": 0.20}
+      },
+      "weather_speeds": {"clear": 8.5, "rain": 6.2, "snow": 4.2, "fog": 5.2},
+      "following_gap": {"normal": 2.5, "snow": 4.5},
+      "maximum_vehicles": 24
+    },
+    "routes": 12,
+    "start_s": -72,
+    "wrap_s": -72,
+    "exit_s": 72,
+    "station": null
+  },
+  "bus_stop": {
+    "name": "CENTRAL EXCHANGE",
+    "camera": {"radius": 76, "theta": 0.95, "phi": 1.02},
+    "road": {"layout": "bus_stop", "approaches": 2, "lanes_per_road": 2, "length": 240},
+    "routes": 2,
+    "start_s": -70,
+    "wrap_s": -120,
+    "exit_s": 120,
+    "station": {
+      "stop_s": -38,
+      "entry_s": -56,
+      "exit_s": -24,
+      "lane_z": 3.3,
+      "bay_z": 6.2,
+      "platform_z": 11.5,
+      "dwell_seconds": 4
+    }
+  }
+}

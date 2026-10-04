@@ -5,6 +5,7 @@ from http.server import ThreadingHTTPServer
 from threading import Thread
 
 from ai_builder.model_adapter import FakeModelAdapter
+from ai_builder.runtime_info import get_runtime_identity
 from ai_builder.scene import EventLog, SceneState
 from ai_builder.server import SceneHandler
 
@@ -36,7 +37,7 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertIn("LIVE WEBGL WORLD", page)
         self.assertIn("/assets/app.js", page)
         self.assertIn("/assets/app.css?v=", page)
-        self.assertIn("SceneAction v0.2", page)
+        self.assertIn("SceneAction v0.3", page)
         self.assertNotIn("getContext('2d')", page)
         self.assertIn("NEXUS CROSSING", page)
         self.assertIn("让天气下暴雪", page)
@@ -49,6 +50,7 @@ class BrowserDemoV04Tests(unittest.TestCase):
             "/assets/scene3d.js": "text/javascript",
             "/assets/traffic-controller.mjs": "text/javascript",
             "/assets/weather-view.js": "text/javascript",
+            "/assets/atmosphere-profile.mjs": "text/javascript",
         }
         for path, content_type in expected.items():
             with self.subTest(path=path):
@@ -74,8 +76,8 @@ class BrowserDemoV04Tests(unittest.TestCase):
         _, page_body = self.get("/")
         health = json.loads(health_body)
         page = page_body.decode("utf-8")
-        self.assertEqual(health["app_version"], "0.5.0")
-        self.assertEqual(health["scene_action_version"], "0.2")
+        self.assertEqual(health["app_version"], "0.8.0")
+        self.assertEqual(health["scene_action_version"], "0.3")
         self.assertIn(f"App v{health['app_version']}", page)
         self.assertIn(f"Build <b>{health['source_fingerprint']}</b>", page)
 
@@ -85,12 +87,40 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertEqual(response.getheader("X-Frame-Options"), "DENY")
         self.assertIn("cdn.jsdelivr.net", response.getheader("Content-Security-Policy"))
 
+    def test_desktop_stage_is_bounded_and_tablet_uses_two_columns(self):
+        _, body = self.get("/assets/app.css")
+        source = body.decode("utf-8")
+        self.assertIn("height: calc(100vh - 108px);", source)
+        self.assertIn("overflow-y: auto;", source)
+        self.assertIn("height: 100%;", source)
+        self.assertIn("max-width: 1500px", source)
+        self.assertIn("grid-template-columns: 280px minmax(500px, 1fr);", source)
+        self.assertIn("height: auto;", source)
+
     def test_browser_javascript_uses_command_endpoint_not_direct_state_write(self):
         _, body = self.get("/assets/app.js")
         source = body.decode("utf-8")
         self.assertIn('fetch("/command"', source)
         self.assertIn("/assets/scene3d.js?v=", source)
+        self.assertIn("/assets/scene-editor.mjs?v=", source)
         self.assertNotIn("state.apply", source)
+
+    def test_editor_module_uses_fingerprint_and_unversioned_assets_revalidate(self):
+        fingerprint = get_runtime_identity().source_fingerprint
+        response, body = self.get(f"/assets/scene-editor.mjs?v={fingerprint}")
+        self.assertEqual(response.status, 200)
+        self.assertIn("immutable", response.getheader("Cache-Control"))
+        self.assertIn("counts.sedan", body.decode("utf-8"))
+        unversioned, _ = self.get("/assets/scene-editor.mjs")
+        self.assertEqual(unversioned.getheader("Cache-Control"), "no-cache")
+
+    def test_manual_signal_copy_matches_safe_green_yellow_and_red_behavior(self):
+        _, body = self.get("/assets/app.js")
+        source = body.decode("utf-8")
+        self.assertIn("仅东西直行与右转放行", source)
+        self.assertIn("全向黄灯警示 · 停止线停车 / 路口内清空", source)
+        self.assertIn("全红 · 所有车辆停车", source)
+        self.assertIn('allCaution ? "CAUTION_ALL"', source)
 
     def test_fingerprinted_static_asset_url_is_served(self):
         _, page_body = self.get("/")

@@ -13,6 +13,7 @@ from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "ai_builder" / "static" / "models"
 OUT.mkdir(parents=True, exist_ok=True)
+bpy.context.preferences.filepaths.save_version = 0
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
 
@@ -77,19 +78,23 @@ for side in [-1,1]:
         cube("Panel seam", (x,y*1.011,1.18),(.012,.018,.62),black)
         cube("Service handle", (x+.24,y*1.018,1.40),(.15,.027,.033),metal)
     cube("Bumper",(4.68,0,.84),(.14,2.33,.24),black,.06)
-    for axle in [-2.9,2.85]:
+    for axle_name,axle in [("rear",-2.9),("front",2.85)]:
+        wheel_id=axle_name+('_left' if side<0 else '_right')
         # Horizontal axles along Blender Y.
         bpy.ops.mesh.primitive_cylinder_add(vertices=40,radius=.55,depth=.28,location=(axle,side*1.18,.57),rotation=(math.pi/2,0,0))
-        tire=bpy.context.object; tire.name="Road wheel"; tire.data.materials.append(rubber)
+        tire=bpy.context.object; tire.name="Road wheel "+wheel_id; tire.data.materials.append(rubber)
+        tire["transit_component"]="wheel"; tire["transit_wheel_id"]=wheel_id
         for p in tire.data.polygons: p.use_smooth=True
         bpy.ops.mesh.primitive_cylinder_add(vertices=32,radius=.31,depth=.30,location=(axle,side*1.23,.57),rotation=(math.pi/2,0,0))
-        bpy.context.object.data.materials.append(metal)
+        rim=bpy.context.object; rim.name="Alloy wheel "+wheel_id; rim.data.materials.append(metal)
+        rim["transit_component"]="wheel"; rim["transit_wheel_id"]=wheel_id
         for angle in range(0,360,60):
             a=math.radians(angle)
-            cube("Wheel lug",(axle+math.cos(a)*.19,side*1.39,.57+math.sin(a)*.19),(.055,.025,.055),black,.01)
+            lug=cube("Wheel lug",(axle+math.cos(a)*.19,side*1.39,.57+math.sin(a)*.19),(.055,.025,.055),black,.01)
+            lug["transit_component"]="wheel"; lug["transit_wheel_id"]=wheel_id
     # Projecting mirrors and marker lights.
-    cube("Mirror arm",(4.05,side*1.41,2.42),(.12,.42,.10),black,.025)
-    cube("Mirror",(4.10,side*1.66,2.29),(.22,.17,.42),black,.045)
+    cube("Mirror arm",(4.05,side*1.30,2.42),(.12,.24,.10),black,.025)
+    cube("Mirror",(4.10,side*1.46,2.29),(.22,.14,.42),black,.045)
     for x in [-4,-1.4,1.5,4]: cube("Side marker",(x,side*1.266,.85),(.15,.025,.06),amber,.01)
 
 # Front windows, LED destination panel, wipers and lower lamps.
@@ -101,7 +106,7 @@ for y in [-.56,.56]:
     w.rotation_euler.x=.32
     cube("Headlight surround",(4.71,y*1.45,1.13),(.08,.38,.22),black,.045)
     cube("Headlight",(4.757,y*1.45,1.14),(.027,.26,.105),white,.025)
-    cube("Rear light",(-4.70,y*1.65,1.44),(.035,.13,.45),red,.028)
+    cube("Rear light",(-4.70,y*1.65,1.44),(.035,.13,.45),red,.028)["transit_component"]="brake_lamp"
 cube("Front badge",(4.735,0,1.42),(.035,.36,.08),metal,.01)
 cube("Number plate",(4.76,0,.77),(.022,.48,.13),teal,.01)
 for y in [-.7,-.45,-.2,.05,.3,.55]: cube("Rear grille",(-4.705,y,1.85),(.025,.055,.46),black)
@@ -119,26 +124,43 @@ bpy.ops.export_scene.gltf(filepath=str(OUT/"city-bus-v1.glb"),export_format="GLB
 
 # Apply transforms and aggregate by material. Convert Z-up to Three Y-up.
 batches={}
+wheel_centers={}
+positions_all=[]
 deps=bpy.context.evaluated_depsgraph_get()
 for obj in bpy.context.scene.objects:
     if obj.type != "MESH": continue
     evaluated=obj.evaluated_get(deps); geo=evaluated.to_mesh(); geo.calc_loop_triangles()
     matrix=obj.matrix_world; normal_matrix=matrix.to_3x3().inverted().transposed()
+    component=obj.get("transit_component","body")
+    wheel_id=obj.get("transit_wheel_id")
+    if wheel_id and wheel_id not in wheel_centers:
+        wheel_centers[wheel_id]=[round(obj.location.x,5),round(obj.location.z,5),round(-obj.location.y,5)]
+    center=wheel_centers.get(wheel_id,[0,0,0]) if wheel_id else [0,0,0]
     for tri in geo.loop_triangles:
         mat=obj.data.materials[tri.material_index]
-        batch=batches.setdefault(mat.name,{"positions":[],"normals":[]})
-        for vi in tri.vertices:
+        key="|".join((mat.name,component,wheel_id or ""))
+        batch=batches.setdefault(key,{"positions":[],"normals":[],"component":component,"wheel_id":wheel_id})
+        for loop_index, vi in zip(tri.loops, tri.vertices):
             v=matrix @ geo.vertices[vi].co
-            n=normal_matrix @ tri.normal; n.normalize()
-            batch["positions"].extend(round(a,5) for a in (v.x,v.z,-v.y))
+            n=normal_matrix @ geo.corner_normals[loop_index].vector; n.normalize()
+            point=(v.x-center[0],v.z-center[1],-v.y-center[2]) if wheel_id else (v.x,v.z,-v.y)
+            batch["positions"].extend(round(a,5) for a in point)
             batch["normals"].extend(round(a,5) for a in (n.x,n.z,-n.y))
+            positions_all.append((v.x,v.z,-v.y))
     evaluated.to_mesh_clear()
-for name,batch in batches.items():
-    mat=bpy.data.materials[name]; node=mat.node_tree.nodes.get("Principled BSDF")
+for key,batch in batches.items():
+    mat=bpy.data.materials[key.split("|",1)[0]]; node=mat.node_tree.nodes.get("Principled BSDF")
     batch["color"]=list(mat.diffuse_color[:3])
     batch["roughness"]=node.inputs["Roughness"].default_value
     batch["metalness"]=node.inputs["Metallic"].default_value
     batch["emission"]=node.inputs["Emission Strength"].default_value
-payload={"format":"transit-mesh-v1","generator":"Blender "+bpy.app.version_string,"units":"metres","batches":batches}
+minimum=[min(point[i] for point in positions_all) for i in range(3)]
+maximum=[max(point[i] for point in positions_all) for i in range(3)]
+payload={"format":"transit-mesh-v1","generator":"Blender "+bpy.app.version_string,"units":"metres",
+         "vehicle_type":"bus","design":"original low-floor electric city bus","wheel_radius":.55,
+         "overall_dimensions":{"length":round(maximum[0]-minimum[0],3),"height":round(maximum[1]-minimum[1],3),"width":round(maximum[2]-minimum[2],3)},
+         "body_dimensions":{"length":9.4,"height":round(maximum[1]-minimum[1],3),"width":2.48},
+         "dimensions":{"length":round(maximum[0]-minimum[0],3),"height":round(maximum[1]-minimum[1],3),"width":round(maximum[2]-minimum[2],3)},
+         "wheel_centers":wheel_centers,"bounds":{"min":[round(x,4) for x in minimum],"max":[round(x,4) for x in maximum]},"batches":batches}
 (OUT/"city-bus-v1.json").write_text(json.dumps(payload,separators=(",",":")),encoding="utf-8")
 print("BUS_EXPORT",json.dumps({"batches":len(batches),"triangles":sum(len(b["positions"])//9 for b in batches.values()),"bytes":(OUT/"city-bus-v1.json").stat().st_size}))

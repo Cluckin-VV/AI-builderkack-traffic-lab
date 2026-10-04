@@ -2,16 +2,16 @@
 
 This package contains the guarded scene-action pipeline and the browser demo host.
 
-> Release candidate (2026-09-14): the tested intersection controller and weather
-> presentation are connected to the browser. The public URL may remain on v0.4
-> until `/health` reports App 0.5.0. See the
-> [implementation and browser evidence](../docs/intersection-control-progress-v0.1.md).
+> Local candidate (2026-09-22): the fixed crossroads, four-phase controller,
+> typed vehicle set, weather and browser workbench are under active development.
+> This build is not deployed. Check `/health` before treating any browser result
+> as current source.
 
 ## Versions
 
-- App: `0.5.0`
+- App: `0.8.0`
 - Command Protocol: `0.3`
-- SceneAction Protocol: `0.2`
+- SceneAction Protocol: `0.3` (v0.2 compatibility retained)
 
 ## Run
 
@@ -61,21 +61,31 @@ After an accepted update, `traffic-controller.mjs` reads the desired scene confi
 
 ## City art assets
 
-`static/urban-world.js` builds the read-only crossroads city, instanced foliage and wet-road reflections. `static/weather-view.js` presents clear, rain, snow and fog modes. `static/scene3d.js` loads the Blender-authored bus from `static/models/city-bus-v1.json`; its editable `.blend` and GLB are included. `static/textures/` contains two original AI-generated base-color textures. Models, textures and browser modules are covered by the runtime fingerprint and served through explicit allowlisted routes.
+`static/urban-world.js` builds the read-only crossroads city, instanced foliage and wet-road reflections. `static/weather-view.js` presents clear, rain, snow and fog modes. `static/scene3d.js` consumes Blender-authored meshes for one original sport sedan, one SUV and one low-floor bus from `static/models/`; editable `.blend`, GLB and compact browser-mesh exports are included. Each runtime model exposes four animated wheel pivots and brake-lamp components. `static/textures/` contains original AI-generated base-color textures. Models, textures and browser modules are covered by the runtime fingerprint and served through explicit allowlisted routes.
 
 Blender is an **authoring tool**, not a runtime dependency. A normal server launch does not download or run Blender and does not generate images. The runtime art payload is approximately 9 MB before HTTP compression/caching; weak mobile GPUs and slow connections need further testing. Bus asset loading failure displays an explicit simplified-model warning.
 
 See [visual upgrade verification](../docs/visual-city-upgrade-v0.1.md) and [intersection verification](../docs/intersection-control-progress-v0.1.md).
 
+## Atmosphere and presentation
+
+The viewport provides daylight, golden-hour and blue-hour lighting plus low/balanced/high quality tiers. These are presentation controls only. Clear/rain/snow/fog buttons still require preview and confirmation. Rain uses shared planar reflection, snowfall uses independently controlled surface coverage, and clouds/lighting/fog blend between weather profiles. FPS is measured native frame timing, not DLSS or generated frames; visible compilation hitches are counted.
+
+See [browser atmosphere evidence and limitations](../docs/atmosphere-polish-v0.1.md). Pure visual configuration tests: `node --test tools/test-atmosphere-profile.mjs`.
+
+The corner refinement adds bird/street/corner observations, dusk-lit architectural windows and eight roof snow surfaces alongside eight sidewalk surfaces. Balanced/low quality disable vehicle-glass transmission while preserving reflective glass; high quality enables it. The FPS badge suspends measurements when hidden or unfocused, but OS occlusion can still throttle a window that reports focus. It is not a benchmark guarantee. See [latest real-browser evidence](../docs/corner-weather-refinement-v0.1.md).
+
 ## Model boundary
 
-The normal browser path uses a deterministic adapter. Real LLM support is shadow-only: it may generate and validate a candidate, but it is not allowed to call `SceneState.apply` or control the browser scene.
+The browser path uses the deterministic ScenePlan parser. Real LLM support is shadow-only: it may generate and validate a candidate, but it is not allowed to call `SceneState.apply` or control the browser scene. This implementation adds no paid API call.
 
 ## Limits
 
 - only the documented Chinese command protocol is executable;
 - process-local state is not persistent;
-- the fixed-step traffic model supports straight approaches only; no turns, pedestrians, collision-grade physics or route planning;
+- the fixed-step traffic model supports straight, protected-left and right turns, but remains a visual prototype without pedestrians, collision-grade physics or route optimization;
 - weather modes are simplified presentation and speed policies, with no independent intensity parameter;
+- signal timing is a configurable demo policy, not traffic-engineering certification;
+- the compact vehicle models are original prototype assets, not photoreal scans or licensed production-car replicas;
 - Three.js is loaded from a pinned jsDelivr URL on first page load.
 - one running server process exposes one shared, ephemeral scene to all visitors.
