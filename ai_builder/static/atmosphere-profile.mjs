@@ -34,6 +34,20 @@ export function lightingFogBrightness(blueWeight) {
   return 1 - .65 * blue;
 }
 
+// Presentation history: rain wets quickly, but pavement dries gradually after it stops.
+// This never changes the selected weather or the domain snapshot.
+export class SurfaceWetness {
+  constructor() { this.value = 0; }
+  advance(seconds, target) {
+    const dt = Number.isFinite(seconds) ? Math.max(0, Math.min(seconds, .1)) : 0;
+    const wet = Number.isFinite(target) ? Math.max(0, Math.min(target, 1)) : 0;
+    const rate = wet > this.value ? 1.2 : .08;
+    this.value += (wet - this.value) * (1 - Math.exp(-dt * rate));
+    if (Math.abs(wet - this.value) < .0001) this.value = wet;
+    return this.value;
+  }
+}
+
 export class LightingTransition {
   constructor() {
     this.target='daylight';

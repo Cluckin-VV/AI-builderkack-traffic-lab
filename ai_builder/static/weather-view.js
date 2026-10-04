@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
-const { AtmosphereTransition, LightingTransition, lightingFogBrightness, qualityProfile, architecturalLightLevel } = await import(new URL(
+const { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, architecturalLightLevel } = await import(new URL(
   './atmosphere-profile.mjs' + new URL(import.meta.url).search, import.meta.url).href);
 
 // Presentation only: reads weather configuration and animates pixels; never writes SceneState.
@@ -9,6 +9,7 @@ export class WeatherView {
     this.weather = "clear";
     this.transition = new AtmosphereTransition();
     this.lighting = new LightingTransition();
+    this.surfaceWetness = new SurfaceWetness();
     this.time = 0;
     this.lightStyle = 'daylight';
     this.environmentWeather = 'clear';
@@ -94,6 +95,8 @@ export class WeatherView {
     const view=this.transition.advance(seconds);
     const lighting=this.lighting.advance(seconds);
     const weights=this.transition.weights;
+    const wetness=this.surfaceWetness.advance(seconds,view.wet)*(1-weights.snow*.9);
+    this.world.container.dataset.surfaceWetness=wetness.toFixed(3);
     this.rain.visible = weights.rain>.001;
     this.rain.material.opacity=weights.rain*.38;
     this.snow.visible = this.weather === "snow" || weights.snow>.001;
@@ -106,8 +109,9 @@ export class WeatherView {
       surface.material.opacity=weights.snow*.82;
     }
     for (const wet of this.world.wetRoads ?? []) {
-      wet.visible = view.wet>.02 && profile.reflections;
-      wet.material.uniforms.wetness.value=view.wet;
+      wet.visible = wetness>.02 && profile.reflections;
+      wet.material.uniforms.wetness.value=wetness;
+      wet.material.uniforms.rainIntensity.value=weights.rain;
       wet.material.uniforms.time.value=this.time;
     }
     // Preserve near-road legibility in fog; blend distant visibility instead.
@@ -142,6 +146,7 @@ export class WeatherView {
     this.world.hemisphere.groundColor.set(0x6f7474);
     this.world.hemisphere.intensity=view.ambient*(1-.38*blue);
     uniforms.clouds.value=view.clouds;uniforms.time.value=this.time;
+    uniforms.cloudBrightness.value=1-.70*blue-.10*golden;
     uniforms.sunDirection.value.copy(this.world.sun.position).normalize();
     uniforms.sunColor.value.copy(this.world.sun.color);
     uniforms.sunStrength.value=(1-view.clouds)*(1-.82*blue);
@@ -150,8 +155,8 @@ export class WeatherView {
       .lerp(this.blendedColor.set(0x7e93b2),blue);
     this.world.scene.environmentIntensity=.72-.27*blue;
     this.world.renderer.toneMappingExposure=view.exposure;
-    this.world.roadMaterial.color.set(0x7b858d).multiplyScalar(1-view.wet*.25);
-    this.world.roadMaterial.roughness=.74-view.wet*.40;
+    this.world.roadMaterial.color.set(0x7b858d).multiplyScalar(1-wetness*.25);
+    this.world.roadMaterial.roughness=.74-wetness*.40;
     for(const light of this.world.streetLights??[]) light.intensity=14*Math.max(view.lamp,blue+golden*.5);
     for(const material of this.world.architecturalLights??[])
       material.emissiveIntensity=Object.entries(lighting).reduce((sum,[style,weight])=>
@@ -174,8 +179,8 @@ export class WeatherView {
       for(let i=0;i<values.length;i+=stride) {
         values[i+1]-=fall*seconds;
         if(stride===3) values[i]+=Math.sin(this.time*.7+i)*seconds*.32;
-        if(values[i+1]<.3)values[i+1]+=35;
-        if(stride===6){values[i+3]=values[i]-.08;values[i+4]=values[i+1]-.8;values[i+5]=values[i+2];}
+        if(values[i+1]<.21)values[i+1]+=35;
+        if(stride===6){values[i+3]=values[i]-.08;values[i+4]=Math.max(.21,values[i+1]-.8);values[i+5]=values[i+2];}
       }
       points.geometry.attributes.position.needsUpdate=true;
     }

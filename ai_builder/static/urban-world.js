@@ -49,11 +49,11 @@ export function createAtmosphere(world) {
   const sky = new THREE.Mesh(new THREE.SphereGeometry(240, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false,
     uniforms: { top: { value: new THREE.Color(0x769bbd) }, bottom: { value: new THREE.Color(0xf5d8bd) },
-      time: { value: 0 }, clouds: { value: .28 }, sunDirection: { value: new THREE.Vector3(-35, 38, 25).normalize() },
+      time: { value: 0 }, clouds: { value: .28 }, cloudBrightness: { value: 1 }, sunDirection: { value: new THREE.Vector3(-35, 38, 25).normalize() },
       sunColor: { value: new THREE.Color(0xffddae) }, sunStrength: { value: 1 } },
     vertexShader: "varying vec3 vWorld; void main(){vWorld=(modelMatrix*vec4(position,1.0)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}",
     fragmentShader: `uniform vec3 top,bottom,sunDirection,sunColor;
-      uniform float time,clouds,sunStrength;varying vec3 vWorld;
+      uniform float time,clouds,sunStrength,cloudBrightness;varying vec3 vWorld;
       float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
       float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
         return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
@@ -68,6 +68,7 @@ export function createAtmosphere(world) {
         coverage*=smoothstep(-.01,.14,h);
         vec3 cloudLight=mix(vec3(.79,.84,.88),vec3(.35,.41,.47),clouds*.65);
         cloudLight+=vec3(.12)*smoothstep(.36,.67,n);
+        cloudLight*=cloudBrightness;
         c=mix(c,cloudLight,coverage*.91);gl_FragColor=vec4(c,1.);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -316,25 +317,39 @@ function createWetRoad(scene, width, depth, sharedReflection = null) {
     vertexShader: `uniform mat4 textureMatrix; varying vec4 projected; varying vec2 surface; varying vec3 worldPosition;
       void main(){ surface=position.xy;worldPosition=(modelMatrix*vec4(position,1.)).xyz;projected=textureMatrix*vec4(position,1.);
         gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-    fragmentShader: `uniform sampler2D tDiffuse; uniform float wetness,time; varying vec4 projected; varying vec2 surface; varying vec3 worldPosition;
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float wetness,time,rainIntensity,overlapHalfWidth; varying vec4 projected; varying vec2 surface; varying vec3 worldPosition;
       float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
       float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
         return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
       void main(){ vec2 uv=projected.xy/projected.w;
-        float wet=.55+.45*noise(surface*vec2(.12,.19));
+        // The perpendicular arm must not blend a second water film over the junction.
+        if(overlapHalfWidth>0. && abs(worldPosition.z)<overlapHalfWidth)discard;
+        vec2 ground=worldPosition.xz;
+        float wet=smoothstep(.18,.78,noise(ground*vec2(.12,.19)));
         vec3 viewDirection=normalize(cameraPosition-worldPosition);
         float fresnel=pow(1.-abs(viewDirection.y),5.);
-        vec2 ripple=vec2(sin(surface.x*8.+time*2.),cos(surface.y*7.-time*3.))*.0003;
+        // Small asynchronous impact rings, not ocean-like waves across the whole road.
+        vec2 cell=floor(ground*1.6), local=fract(ground*1.6);
+        float cycle=time*1.8+hash(cell)*9.;
+        float age=fract(cycle), eventId=floor(cycle);
+        vec2 center=.25+.5*vec2(hash(cell+eventId),hash(cell+eventId+17.));
+        vec2 offset=local-center;float distanceToImpact=length(offset);
+        float ring=exp(-pow((distanceToImpact-age*.23)/.018,2.));
+        float impact=ring*sin(age*3.14159)*(1.-age)*rainIntensity*wet;
+        vec2 ripple=offset/max(distanceToImpact,.001)*impact*.00065;
         uv+=ripple;vec2 d=vec2(.0015,.0025);vec3 reflection=texture2D(tDiffuse,uv).rgb*.4;
         reflection+=(texture2D(tDiffuse,uv+d).rgb+texture2D(tDiffuse,uv-d).rgb)*.3;
         // Water is weakly reflective head-on and stronger at grazing angles.
         // Never turn the bird's-eye asphalt into bright camouflage puddles.
+        reflection+=vec3(.10,.13,.15)*impact;
         gl_FragColor=vec4(reflection,wet*(.025+.32*fresnel)*wetness);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
   };
   shader.uniforms.wetness = {value:0}; shader.uniforms.time = {value:0};
+  shader.uniforms.rainIntensity = {value:0};
+  shader.uniforms.overlapHalfWidth = {value:sharedReflection ? sharedReflection.geometry.parameters.height/2 : 0};
   const film=new Reflector(new THREE.PlaneGeometry(width,depth),{
     textureWidth:768,textureHeight:512,clipBias:.003,multisample:0,shader,
   });

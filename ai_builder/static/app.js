@@ -386,6 +386,8 @@ function clearPlanPreview() {
 }
 
 function showPlanPreview(result) {
+  const wasImmersive = document.body.classList.contains("immersive");
+  if (wasImmersive) setImmersive(false);
   pendingPlanId = result.plan.plan_id;
   pendingUndoOf = result.undo_of ?? null;
   document.querySelector("#plan-preview-title").textContent = pendingUndoOf ? "撤销预览" : "执行前预览";
@@ -418,7 +420,8 @@ function showPlanPreview(result) {
   world?.syncState(result.projected_scene ?? projected);
   window.__lastUndo = result.undo;
   updateUndoControl(result.undo);
-  confirmPlanButton.focus();
+  planPreview.scrollIntoView({ block: "nearest" });
+  (wasImmersive ? cancelPlanButton : confirmPlanButton).focus({ preventScroll: true });
 }
 
 async function previewPlan(command) {
@@ -570,10 +573,21 @@ cancelPlanButton.addEventListener("click", () => {
   promptInput.focus();
 });
 
-document.querySelector("#immersive-view").addEventListener("click", (event) => {
-  const active = document.body.classList.toggle("immersive");
-  event.currentTarget.setAttribute("aria-pressed", String(active));
-  event.currentTarget.textContent = active ? "返回工作台" : "沉浸场景";
+function setImmersive(active) {
+  // Pending operations must keep their review and cancel controls reachable.
+  if (active && pendingPlanId) {
+    planPreview.scrollIntoView({ block: "nearest" });
+    cancelPlanButton.focus({ preventScroll: true });
+    return;
+  }
+  document.body.classList.toggle("immersive", active);
+  const button = document.querySelector("#immersive-view");
+  button.setAttribute("aria-pressed", String(active));
+  button.textContent = active ? "返回工作台" : "沉浸场景";
+}
+
+document.querySelector("#immersive-view").addEventListener("click", () => {
+  setImmersive(!document.body.classList.contains("immersive"));
 });
 
 document.querySelector("#camera-mode").addEventListener("click", (event) => {

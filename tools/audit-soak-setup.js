@@ -11,8 +11,10 @@ async (page) => {
     await page.getByRole('button',{name:'确认执行全部动作',exact:true}).click();
     await page.waitForFunction(count => document.querySelector('#state-buses').textContent===String(count),sedan+suv+bus);
   }
-  await page.getByRole('button',{name:'街景视角',exact:true}).click();
-  await page.getByRole('button',{name:'沉浸场景',exact:true}).click();
+  if(await page.locator('#scene-root').getAttribute('data-camera-mode')!=='street')
+    await page.getByRole('button',{name:'街景视角',exact:true}).click();
+  if(!await page.evaluate(()=>document.body.classList.contains('immersive')))
+    await page.getByRole('button',{name:'沉浸场景',exact:true}).click();
   await page.setViewportSize({width:1968,height:1420});
   for(let attempt=0;attempt<4;attempt++) {
     await page.waitForFunction(() => {

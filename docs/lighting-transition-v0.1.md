@@ -1,5 +1,12 @@
 # Coordinated lighting transition
 
+Publication update (2026-10-05): the change below was published in commit
+`6bc7e294c2f49bdbce73a9a10c7ff08b85207ea2`. A fresh public `/health`
+response on 2026-10-05 confirmed `git_commit: 6bc7e29` and
+`source_fingerprint: a924e44106f3`. The original local-only record below
+is retained as historical evidence. Subsequent rain-surface refinements are
+tracked in `douyin-reference-review-v0.1.md`.
+
 2026-10-04, local browser verification. Not yet published.
 
 Daylight/golden/blue-hour selection now smoothly blends solar elevation,

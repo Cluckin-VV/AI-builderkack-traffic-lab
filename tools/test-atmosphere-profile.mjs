@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AtmosphereTransition, LightingTransition, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, architecturalLightLevel } from '../ai_builder/static/atmosphere-profile.mjs';
+import { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, architecturalLightLevel } from '../ai_builder/static/atmosphere-profile.mjs';
 
 test('weather changes blend rather than jumping on confirmation', () => {
   const blend = new AtmosphereTransition();
@@ -91,4 +91,25 @@ test('fog follows continuous dusk lighting instead of keeping daylight brightnes
   assert.equal(lightingFogBrightness(1),.35);
   assert.ok(lightingFogBrightness(.5)>.35&&lightingFogBrightness(.5)<1);
   assert.equal(lightingFogBrightness(NaN),1);
+});
+
+test('pavement wets in rain and retains moisture after rain stops before drying', () => {
+  const surface=new SurfaceWetness();
+  for(let i=0;i<300;i++)surface.advance(1/60,1);
+  assert.ok(surface.value>.99);
+  const atStop=surface.value;
+  assert.ok(surface.advance(1/60,0)>atStop*.99);
+  for(let i=0;i<600;i++)surface.advance(1/60,0);
+  assert.ok(surface.value>.4 && surface.value<.5);
+  for(let i=0;i<3600;i++)surface.advance(1/60,0);
+  assert.ok(surface.value<.01);
+});
+test('wetness history is bounded across interrupted weather, pause and background time', () => {
+  const surface=new SurfaceWetness();
+  for(const dt of [0,NaN,Infinity,-10])assert.equal(surface.advance(dt,1),0);
+  assert.ok(surface.advance(200,1)<.12);
+  for(const target of [1,0,.1,1,0,NaN,Infinity,-10,10]) {
+    surface.advance(.1,target);
+    assert.ok(Number.isFinite(surface.value)&&surface.value>=0&&surface.value<=1);
+  }
 });
