@@ -1,6 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
 const { Reflector } = await import("/assets/vendor/Reflector.js" + new URL(import.meta.url).search);
-const { junctionPaint } = await import("/assets/road-markings.mjs" + new URL(import.meta.url).search);
+const { junctionPaint, laneArrowPolygon } = await import("/assets/road-markings.mjs" + new URL(import.meta.url).search);
 
 // Presentation-only assets. No commands, validators or SceneState writes here.
 const mats = new Map();
@@ -147,16 +147,13 @@ export function createCity(world, parent = world.scene, definition = {}) {
   const arrows = [];
   const addArrow = (approach, movement, along, lateral) => {
     const a = junction.approaches?.[approach] ?? { forward: [1,0], right: [0,-1] };
-    let direction = a.forward;
-    if (movement === 'left') direction = [-a.right[0], -a.right[1]];
-    if (movement === 'right') direction = a.right;
-    const side = [direction[1], -direction[0]];
     const center = [a.forward[0]*along + a.right[0]*lateral, a.forward[1]*along + a.right[1]*lateral];
-    const shape = [[-1,-.2],[.1,-.2],[.1,-.65],[1,0],[.1,.65],[.1,.2],[-1,.2]];
-    const positions = shape.flatMap(([f,l]) => [center[0] + direction[0]*f + side[0]*l, .235, center[1] + direction[1]*f + side[1]*l]);
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-    geometry.setIndex([0,1,5, 0,5,6, 1,2,3, 1,3,4, 1,4,5]); geometry.computeVertexNormals();
+    const points = laneArrowPolygon(movement).map(([f,r]) => new THREE.Vector2(
+      center[0] + a.forward[0]*f + a.right[0]*r,
+      center[1] + a.forward[1]*f + a.right[1]*r,
+    ));
+    const geometry = new THREE.ShapeGeometry(new THREE.Shape(points));
+    geometry.rotateX(Math.PI/2); geometry.translate(0,.235,0);
     const paint = new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:0xf3eee0,side:THREE.DoubleSide}));
     paint.renderOrder=2; scene.add(paint); arrows.push(paint);
   };

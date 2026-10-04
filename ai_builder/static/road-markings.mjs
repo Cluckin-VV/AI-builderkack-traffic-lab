@@ -4,6 +4,20 @@ const APPROACHES = {
   S: {forward:[0,1], right:[1,0]}, N: {forward:[0,-1], right:[-1,0]},
 };
 
+// Points are [incoming-forward, driver-right] in metres. A turn keeps its
+// upstream stem; rotating a straight arrow sideways would lose that meaning.
+export function laneArrowPolygon(movement) {
+  if (movement === 'straight') return [
+    [-2,-.22],[.65,-.22],[.65,-.7],[2,0],[.65,.7],[.65,.22],[-2,.22],
+  ];
+  if (!['left','right'].includes(movement)) throw new RangeError('Unknown lane movement');
+  const right = [
+    [-2,-.22],[1.22,-.22],[1.22,.65],[1.7,.65],[1,1.5],
+    [.3,.65],[.78,.65],[.78,.22],[-2,.22],
+  ];
+  return movement === 'right' ? right : right.map(([f,r])=>[f,-r]);
+}
+
 export function junctionPaint(definition = {}) {
   const junction = definition.junction ?? {};
   const halfWidth = (definition.road?.width ?? 30) / 2;
