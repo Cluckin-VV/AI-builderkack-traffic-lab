@@ -1,5 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
 const { Reflector } = await import("/assets/vendor/Reflector.js" + new URL(import.meta.url).search);
+const { junctionPaint } = await import("/assets/road-markings.mjs" + new URL(import.meta.url).search);
 
 // Presentation-only assets. No commands, validators or SceneState writes here.
 const mats = new Map();
@@ -164,9 +165,13 @@ export function createCity(world, parent = world.scene, definition = {}) {
   const laneWidth = junction.lane_width ?? 3.5;
   const stopS = Math.abs(junction.stop_line_s ?? -20.5);
   const crosswalkS = Math.abs(junction.crosswalk_s ?? -17.5);
+  const paint = junctionPaint(definition);
+  for (const bar of paint.stopBars)
+    block(scene,bar.x,.235,bar.z,bar.width,.026,bar.depth,marking,false);
+  const median = material(0xe7c952,.65);
+  for (const divider of paint.dividers)
+    block(scene,divider.x,.216,divider.z,divider.width,.016,divider.depth,median,false);
   for(const side of [-1,1]) {
-    block(scene,side*stopS,.235,0,.34,.026,roadWidth-1.4,marking,false);
-    block(scene,0,.235,side*stopS,roadWidth-1.4,.026,.34,marking,false);
     for(let offset=-roadHalf+1.2;offset<roadHalf-1;offset+=1.15) {
       block(scene,side*crosswalkS,.235,offset,3.1,.026,.56,marking,false);
       block(scene,offset,.235,side*crosswalkS,.56,.026,3.1,marking,false);
@@ -182,11 +187,6 @@ export function createCity(world, parent = world.scene, definition = {}) {
         block(scene,along,.214,side*offset,4.2,.016,.10,marking,false);
         block(scene,side*offset,.214,along,.10,.016,4.2,marking,false);
       }
-    }
-    const median=material(0xe7c952,.65);
-    for(const offset of [.55,1.05]) {
-      block(scene,0,.216,side*offset,160,.016,.10,median,false);
-      block(scene,side*offset,.216,0,.10,.016,160,median,false);
     }
   }
   for(const approach of ['W','E','S','N']) {

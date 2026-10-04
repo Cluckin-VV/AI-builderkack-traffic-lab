@@ -35,6 +35,7 @@ STATIC_FILES = {
     "/assets/traffic-controller.mjs": ("text/javascript; charset=utf-8", STATIC_DIR / "traffic-controller.mjs"),
     "/assets/weather-view.js": ("text/javascript; charset=utf-8", STATIC_DIR / "weather-view.js"),
     "/assets/atmosphere-profile.mjs": ("text/javascript; charset=utf-8", STATIC_DIR / "atmosphere-profile.mjs"),
+    "/assets/road-markings.mjs": ("text/javascript; charset=utf-8", STATIC_DIR / "road-markings.mjs"),
     "/assets/models/city-bus-v1.json": ("application/json", STATIC_DIR / "models/city-bus-v1.json"),
     "/assets/models/city-bus-v1.glb": ("model/gltf-binary", STATIC_DIR / "models/city-bus-v1.glb"),
     "/assets/models/city-sedan-v1.json": ("application/json", STATIC_DIR / "models/city-sedan-v1.json"),
