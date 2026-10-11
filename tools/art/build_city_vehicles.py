@@ -10,6 +10,7 @@ import math
 from pathlib import Path
 
 import bpy
+from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "ai_builder" / "static" / "models"
@@ -133,6 +134,20 @@ def panel(name, coords, material, component=None):
     return obj
 
 
+def framed_window(name, corners, frame, seal, glass):
+    """Coplanar glazing and inset rings: no solid cabin hiding the windscreen."""
+    outer = [Vector(v) for v in corners]
+    center = sum(outer, Vector()) / 4
+    # Separate rings, not a dark quad behind a smaller floating pane.
+    inner = [center + (v-center)*.91 for v in outer]
+    pane = [center + (v-center)*.885 for v in outer]
+    for i in range(4):
+        j = (i+1) % 4
+        panel(name + " painted frame", [outer[i], outer[j], inner[j], inner[i]], frame)
+        panel(name + " rubber seal", [inner[i], inner[j], pane[j], pane[i]], seal)
+    panel(name, pane, glass, "glass")
+
+
 def cylinder(name, loc, radius, depth, material, component=None, wheel_id=None, vertices=32):
     bpy.ops.mesh.primitive_cylinder_add(vertices=vertices, radius=radius, depth=depth,
                                         location=loc, rotation=(math.pi / 2, 0, 0))
@@ -164,6 +179,39 @@ def torus(name, loc, major_radius, minor_radius, material, component=None, wheel
     return obj
 
 
+def annular_wheel(name, loc, section, material, wheel_id):
+    """Revolve a radial/axial section around the axle; leave the hub opening clear."""
+    vertices, faces = [], []
+    segments = 48
+    for i in range(segments):
+        angle = math.tau*i/segments
+        vertices.extend((loc[0]+r*math.cos(angle), loc[1]+axial, loc[2]+r*math.sin(angle))
+                        for r, axial in section)
+    count = len(section)
+    for i in range(segments):
+        for j in range(count):
+            faces.append((i*count+j, ((i+1)%segments)*count+j,
+                          ((i+1)%segments)*count+(j+1)%count, i*count+(j+1)%count))
+    mesh = bpy.data.meshes.new(name)
+    mesh.from_pydata(vertices, [], faces)
+    mesh.materials.append(material)
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    # Recalculate outward normals on the closed annulus independently of profile winding.
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    bm.to_mesh(mesh)
+    bm.free()
+    for face in mesh.polygons:
+        face.use_smooth = True
+    obj["transit_component"] = "wheel"
+    obj["transit_wheel_id"] = wheel_id
+    return obj
+
+
 def mark(obj, component):
     obj["transit_component"] = component
     return obj
@@ -178,8 +226,7 @@ def build(kind, length, width, color, suv=False):
     clear_scene()
     paint = mat(kind + " deep metallic enamel", color, .24, .29, coat=.72, coat_rough=.16)
     secondary = mat(kind + " satin lower trim", (.025, .034, .039), .24, .34, coat=.22, coat_rough=.25)
-    glass = mat("Layered blue-black automotive glass", (.055, .19, .25), .16, .15, coat=.48, coat_rough=.10)
-    roof_glass = mat(kind + " panoramic roof glass", (.018, .035, .045), .12, .16, coat=.62, coat_rough=.08)
+    glass = mat("Layered blue-black automotive glass", (.028, .048, .062), .08, .13, coat=.48, coat_rough=.10)
     rubber = mat("Road tire rubber", (.012, .016, .019), .02, .86)
     alloy = mat("Forged satin alloy", (.50, .57, .59), .82, .20, coat=.18, coat_rough=.16)
     rotor = mat("Ventilated brake rotor", (.19, .22, .23), .76, .30)
@@ -206,107 +253,92 @@ def build(kind, length, width, color, suv=False):
         (half - .22, full_width * .46, .39, .86),
         (half, full_width * .40, .40, .72),
     ]
-    profile("Sculpted one-piece painted body", sections, paint)
+    body = profile("Sculpted one-piece painted body", sections, paint)
+    # Actual wheel openings, not a solid body hidden behind protruding tires.
+    for x in (-wheel_x, wheel_x):
+        cutter = cylinder("Temporary wheel opening", (x, 0, wheel_z), tire_r+.045,
+                          width+1, rubber, vertices=64)
+        modifier = body.modifiers.new("Wheel well clearance", "BOOLEAN")
+        modifier.operation = 'DIFFERENCE'
+        modifier.solver = 'EXACT'
+        modifier.object = cutter
+        bpy.context.view_layer.objects.active = body
+        bpy.ops.object.modifier_apply(modifier=modifier.name)
+        bpy.data.objects.remove(cutter, do_unlink=True)
     cube("Front energy-absorbing bumper", (half - .10, 0, .48), (.20, width * .91, .25), secondary, .075)
     cube("Rear energy-absorbing bumper", (-half + .10, 0, .47), (.20, width * .91, .23), secondary, .07)
     cube("Full-width front lower intake", (half - .035, 0, .61), (.045, width * .57, .17), grille, .035)
     cube("Front splitter", (half - .19, 0, .365), (.38, width * .78, .055), secondary, .018)
     cube("Rear diffuser", (-half + .17, 0, .355), (.34, width * .72, .07), secondary, .025)
-    cube("Hood center power crease", (length * .29, 0, body_height + .025),
-         (length * .30, .045, .014), secondary, .006)
     for side in (-1, 1):
-        cube("Hood shoulder crease", (length * .29, side * width * .30, body_height + .018),
-             (length * .28, .025, .012), alloy, .004)
-        cube("Sculpted side sill", (0, side * (width * .485), .44), (length * .70, .10, .17), secondary, .045)
-        cube("Chrome beltline", (-.10, side * (width * .497), 1.00 if suv else .925),
-             (length * .59, .025, .027), alloy, .01)
-        cube("Front wheel-arch cladding", (wheel_x, side * (width * .493), wheel_z + .06),
-             (1.12 if suv else .92, .075, .13), secondary, .06)
-        cube("Rear wheel-arch cladding", (-wheel_x, side * (width * .493), wheel_z + .06),
-             (1.12 if suv else .92, .075, .13), secondary, .06)
+        cube("Sculpted side sill", (0, side * (width * .485), .44),
+             (2*(wheel_x-tire_r-.06), .10, .17), secondary, .045)
         # Door shut lines are geometry, not painted-on texture, so they stay
         # legible under both the oblique and street cameras.
         for x in (-.58, .53):
             cube("Door shut line", (x, side * (width * .506), .74),
                  (.012, .010, .34), grille, .003, component="door_gap")
         cube("Lower door crease", (-.02, side * (width * .507), .63),
-             (length * .54, .010, .014), secondary, .003, component="door_gap")
+             (2*(wheel_x-tire_r-.06), .010, .014), secondary, .003, component="door_gap")
 
     roof_z = 1.74 if suv else 1.48
-    cabin_bottom = 1.02 if suv else .91
+    cabin_bottom = 1.09 if suv else .96
     cabin_rear = -length * .34
-    cabin_front = length * .18
+    cabin_front = length * .23
     roof_rear = -length * .20
     roof_front = length * .055
     cabin_half_width = width * (.435 if suv else .405)
     roof_half_width = width * (.40 if suv else .365)
-    # Original fastback/utility cabin profile: front and rear glass are sloped,
-    # the SUV keeps a taller greenhouse and visibly upright rear roofline.
-    profile("Sculpted cabin frame", [
-        (cabin_rear, cabin_half_width, cabin_bottom, 1.18 if suv else 1.12),
-        ((cabin_rear + roof_rear) / 2, cabin_half_width * .96, cabin_bottom, roof_z - .03),
-        (roof_rear, roof_half_width, cabin_bottom, roof_z),
-        (roof_front, roof_half_width, cabin_bottom, roof_z),
-        ((cabin_front + roof_front) / 2, cabin_half_width * .96, cabin_bottom, roof_z - .03),
-        (cabin_front, cabin_half_width, cabin_bottom, 1.20 if suv else 1.10),
-    ], secondary)
-    cube("Panoramic roof panel", ((roof_rear + roof_front) / 2, 0, roof_z + .012),
-         (abs(roof_front - roof_rear) + .10, roof_half_width * 1.96, .055), roof_glass, .026)
-    # Separate front/rear windscreens are kept readable from street and bird views.
-    panel("Panoramic front windscreen", [
-        (cabin_front + .035, -cabin_half_width * .91, 1.17 if suv else 1.10),
-        (cabin_front + .035, cabin_half_width * .91, 1.17 if suv else 1.10),
-        (roof_front + .055, roof_half_width * .91, roof_z - .065),
-        (roof_front + .055, -roof_half_width * .91, roof_z - .065),
-    ], glass, "glass")
-    panel("Rear sloped windscreen", [
-        (cabin_rear - .03, cabin_half_width * .90, 1.18 if suv else 1.12),
-        (cabin_rear - .03, -cabin_half_width * .90, 1.18 if suv else 1.12),
-        (roof_rear - .05, -roof_half_width * .90, roof_z - .065),
-        (roof_rear - .05, roof_half_width * .90, roof_z - .065),
-    ], glass, "glass")
+    # The roof, glass and pillars meet on the same four boundaries. Previously
+    # a smoothed solid cabin protruded through these sloped glass quads.
+    profile("Crowned painted roof", [
+        (roof_rear, roof_half_width, roof_z-.065, roof_z-.02),
+        ((roof_rear+roof_front)/2, roof_half_width, roof_z-.065, roof_z+.025),
+        (roof_front, roof_half_width, roof_z-.065, roof_z-.02),
+    ], paint)
+    framed_window("Front windscreen", [
+        (cabin_front, -cabin_half_width, cabin_bottom),
+        (cabin_front, cabin_half_width, cabin_bottom),
+        (roof_front, roof_half_width, roof_z-.04),
+        (roof_front, -roof_half_width, roof_z-.04),
+    ], paint, secondary, glass)
+    framed_window("Rear windscreen", [
+        (cabin_rear, cabin_half_width, cabin_bottom),
+        (cabin_rear, -cabin_half_width, cabin_bottom),
+        (roof_rear, -roof_half_width, roof_z-.04),
+        (roof_rear, roof_half_width, roof_z-.04),
+    ], paint, secondary, glass)
 
     for side in (-1, 1):
-        y = side * (cabin_half_width + .018)
-        roof_y = side * (roof_half_width + .018)
+        y = side * cabin_half_width
+        roof_y = side * roof_half_width
         mid = (cabin_rear + cabin_front) / 2
-        panel("Front side glass", [
-            (cabin_front - .08, y, 1.18 if suv else 1.10),
-            (mid + .06, y, 1.18 if suv else 1.11),
-            (mid + .04, roof_y, roof_z - .105),
-            (roof_front + .02, roof_y, roof_z - .105),
-        ], glass, "glass")
-        panel("Rear side quarter glass", [
-            (mid - .08, y, 1.18 if suv else 1.11),
-            (cabin_rear + .10, y, 1.19 if suv else 1.12),
-            (cabin_rear + .08, roof_y, roof_z - .105),
-            (roof_rear + .04, roof_y, roof_z - .105),
-        ], glass, "glass")
-        # Thin pillars break the glass into believable automotive panels and
-        # give the cabin a stable silhouette at low render distances.
-        for pillar_x, pillar_z, pillar_angle in (
-            (cabin_front - .02, 1.34 if suv else 1.25, -.16),
-            (mid, 1.38 if suv else 1.28, 0.0),
-            (cabin_rear + .02, 1.35 if suv else 1.25, .13),
+        for name, corners in (
+            ("Front side glass", [(cabin_front,y,cabin_bottom), (mid,y,cabin_bottom),
+                                  (mid,roof_y,roof_z-.04), (roof_front,roof_y,roof_z-.04)]),
+            ("Rear side glass", [(mid,y,cabin_bottom), (cabin_rear,y,cabin_bottom),
+                                 (roof_rear,roof_y,roof_z-.04), (mid,roof_y,roof_z-.04)]),
         ):
-            cube("Cabin window pillar", (pillar_x, side * (cabin_half_width + .026), pillar_z),
-                 (.035, .026, .30 if suv else .26), secondary, .009,
-                 rotation=(0, pillar_angle, 0))
+            # Mirroring changes winding; both body frames remain outward-facing.
+            framed_window(name, list(reversed(corners)) if side < 0 else corners, paint, secondary, glass)
         for x in (-.35, .72):
             cube("Flush door handle", (x, side * (width * .50 + .025), .91 if not suv else 1.0),
                  (.20, .045, .045), alloy, .018)
         # Mirror stem and housing, mirrored independently at each A-pillar.
-        cube("Mirror stem", (cabin_front - .12, side * (width * .50 + .025), 1.20),
-             (.06, .055, .055), secondary, .018)
-        cube("Aerodynamic side mirror", (cabin_front - .03, side * (width * .50 + .10), 1.24),
+        mirror_x, mirror_z = cabin_front-.20, cabin_bottom+.10
+        mirror_y = width*.50+.08
+        foot_y = cabin_half_width-.02
+        cube("Mirror stem", (mirror_x, side * (foot_y+mirror_y)/2, mirror_z),
+             (.075, mirror_y-foot_y+.02, .055), secondary, .018)
+        cube("Aerodynamic side mirror", (mirror_x, side * mirror_y, mirror_z+.025),
              (.27, .14, .17), paint, .065)
-        cube("Mirror indicator", (cabin_front + .02, side * (width * .50 + .174), 1.24),
+        cube("Mirror indicator", (mirror_x+.05, side * (mirror_y+.074), mirror_z+.025),
              (.13, .012, .028), amber, .01)
         if suv:
             cube("Matte SUV rocker cladding", (0, side * (width * .507), .43),
-                 (length * .69, .035, .22), secondary, .055)
+                 (2*(wheel_x-tire_r-.06), .035, .22), secondary, .055)
             cube("Raised roof rail", ((roof_rear + roof_front) / 2, side * width * .36, roof_z + .08),
-                 (length * .42, .045, .055), alloy, .02)
+                 (roof_front-roof_rear-.08, .045, .055), alloy, .02)
             for support_x in (roof_rear + .16, roof_front - .10):
                 cube("Roof rail mounting foot", (support_x, side * width * .36, roof_z + .045),
                      (.065, .075, .09), secondary, .018)
@@ -317,10 +349,17 @@ def build(kind, length, width, color, suv=False):
         for side_name, side in (("left", -1), ("right", 1)):
             wheel_id = axle_name + "_" + side_name
             y = side * (width * .49)
-            cylinder("Tire " + wheel_id, (x, y, wheel_z), tire_r, .27 if suv else .235,
-                     rubber, "wheel", wheel_id, 40)
-            cylinder("Forged alloy rim " + wheel_id, (x, side * (width * .49 + .125), wheel_z),
-                     tire_r * .64, .035, alloy, "wheel", wheel_id, 32)
+            depth = .27 if suv else .235
+            annular_wheel("Rounded tire " + wheel_id, (x,y,wheel_z), [
+                (tire_r*.64, -depth*.5), (tire_r*.86, -depth*.5),
+                (tire_r*.98, -depth*.36), (tire_r, -depth*.22),
+                (tire_r, depth*.22), (tire_r*.98, depth*.36),
+                (tire_r*.86, depth*.5), (tire_r*.64, depth*.5),
+            ], rubber, wheel_id)
+            annular_wheel("Open alloy rim " + wheel_id, (x,y,wheel_z), [
+                (tire_r*.60,-depth*.43), (tire_r*.66,-depth*.43),
+                (tire_r*.66,depth*.43), (tire_r*.60,depth*.43),
+            ], alloy, wheel_id)
             cylinder("Ventilated brake disc " + wheel_id, (x, side * (width * .49 + .105), wheel_z),
                      tire_r * .43, .018, rotor, "wheel", wheel_id, 32)
             cylinder("Dark hub " + wheel_id, (x, side * (width * .49 + .15), wheel_z),
@@ -333,10 +372,6 @@ def build(kind, length, width, color, suv=False):
                     (tire_r * .44, .038, .055), alloy, .014,
                     component="wheel", wheel_id=wheel_id,
                     rotation=(0, -angle, 0))
-            for side_sign in (-1, 1):
-                cylinder("Wheel sidewall " + wheel_id + str(side_sign),
-                         (x, side * (width * .49 + side_sign * .126), wheel_z), tire_r * .91, .012,
-                         rubber, "wheel", wheel_id, 40)
             # A low-profile shoulder ring reads as tread in close-up without
             # turning either passenger vehicle into an off-road toy.
             torus("Tire shoulder tread " + wheel_id,
@@ -345,22 +380,22 @@ def build(kind, length, width, color, suv=False):
             # The caliper is deliberately a separate named component so the
             # browser can preserve a convincing wheel/brake reading.
             cube("Performance brake caliper " + wheel_id,
-                 (x + tire_r * .18, side * (width * .49 + .172), wheel_z + tire_r * .38),
-                 (.085, .038, .18), caliper, .018,
+                 (x + tire_r * .18, side * (width * .49 + .113), wheel_z + tire_r * .31),
+                 (.065, .026, .13), caliper, .014,
                  component="brake_caliper", wheel_id=wheel_id,
                  rotation=(0, .12, 0))
 
     # Headlamps, rear light bar, grille slats and plate are recognizable but
     # deliberately generic; brake lamps have a runtime-controlled emissive cue.
     for side in (-1, 1):
-        cube("Projector headlamp housing", (half - .15, side * width * .31, .82 if not suv else .91),
-             (.10, .48, .17), grille, .055)
-        cube("Projector LED", (half - .09, side * width * .31, .83 if not suv else .92),
-             (.035, .37, .075), headlamp, .028, component="headlamp")
-        cube("Tail lamp dark surround", (-half + .10, side * width * .34, .83 if not suv else .96),
-             (.07, .37, .20), secondary, .04)
-        cube("Adaptive brake light", (-half + .055, side * width * .34, .84 if not suv else .97),
-             (.035, .29, .105), brake_lamp, .025, component="brake_lamp")
+        cube("Projector headlamp housing", (half - .02, side * width * .25, .665),
+             (.04, .38, .13), grille, .018)
+        cube("Projector LED", (half - .001, side * width * .25, .67),
+             (.006, .31, .055), headlamp, .003, component="headlamp")
+        cube("Tail lamp dark surround", (-half + .02, side * width * .27, .665),
+             (.04, .34, .13), secondary, .018)
+        cube("Adaptive brake light", (-half + .001, side * width * .27, .67),
+             (.006, .28, .075), brake_lamp, .003, component="brake_lamp")
         cube("Front fender marker", (wheel_x + .35, side * (width * .505), .78),
              (.18, .024, .06), amber, .02)
     for y in (-.43, -.28, -.14, 0, .14, .28, .43):
@@ -370,7 +405,7 @@ def build(kind, length, width, color, suv=False):
 
     # A subtle rear lip differs from the SUV's practical roof spoiler.
     if suv:
-        cube("SUV rear roof spoiler", (cabin_rear - .05, 0, roof_z + .075), (.32, width * .76, .085), secondary, .035)
+        cube("SUV rear roof spoiler", (roof_rear - .05, 0, roof_z-.01), (.25, width * .76, .065), paint, .025)
         cube("Rear utility lower guard", (-half + .08, 0, .40), (.14, width * .80, .11), alloy, .025)
     else:
         cube("Integrated rear deck lip", (-length * .34, 0, 1.005), (.34, width * .78, .075), paint, .032)
@@ -380,7 +415,9 @@ def build(kind, length, width, color, suv=False):
     bpy.ops.export_scene.gltf(filepath=str(filepath.with_suffix(".glb")), export_format="GLB", export_yup=True)
 
     batches = {}
-    wheel_centers = {}
+    wheel_centers = {axle + "_" + side_name: [round(x,5), wheel_z, round(-side*width*.49,5)]
+                     for axle, x in (("front",wheel_x),("rear",-wheel_x))
+                     for side_name, side in (("left",-1),("right",1))}
     positions_all = []
     deps = bpy.context.evaluated_depsgraph_get()
     for obj in bpy.context.scene.objects:

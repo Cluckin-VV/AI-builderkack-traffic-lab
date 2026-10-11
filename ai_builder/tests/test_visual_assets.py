@@ -95,6 +95,21 @@ class VisualAssetTests(unittest.TestCase):
                 self.assertIn("brake_caliper", components)
                 self.assertIn("door_gap", components)
 
+    def test_passenger_tires_have_open_hubs_and_concentric_axles(self):
+        for kind in ("sedan", "suv"):
+            model = json.loads(self.get(f"/assets/models/city-{kind}-v1.json")[2])
+            radius = model["wheel_radius"]
+            tires = [b for name, b in model["batches"].items()
+                     if name.startswith("Road tire rubber|wheel|")]
+            self.assertEqual(len(tires), 4)
+            for tire in tires:
+                p = tire["positions"]
+                radii = [math.hypot(p[i], p[i+1]) for i in range(0, len(p), 3)]
+                self.assertGreater(min(radii), radius*.63, "rubber must not cap the alloy opening")
+                self.assertAlmostEqual(max(radii), radius, places=4)
+            self.assertAlmostEqual(model["wheel_centers"]["front_left"][0],
+                                   model["body_dimensions"]["length"]*.305, places=4)
+
     def test_vehicle_runtime_has_dynamics_cues_bound_to_traffic_state(self):
         scene3d = (STATIC_DIR / "scene3d.js").read_text(encoding="utf-8")
         urban_world = (STATIC_DIR / "urban-world.js").read_text(encoding="utf-8")
@@ -103,6 +118,45 @@ class VisualAssetTests(unittest.TestCase):
         self.assertIn("bodyDynamics", scene3d)
         self.assertIn("brakeLamps", urban_world)
         self.assertIn("wheelPivots", urban_world)
+
+    def test_passenger_windscreens_are_not_buried_under_opaque_cabin(self):
+        def sub(a, b):
+            return [x-y for x, y in zip(a, b)]
+        def dot(a, b):
+            return sum(x*y for x, y in zip(a, b))
+        def cross(a, b):
+            return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]
+        def hit(origin, direction, a, b, c):
+            e1, e2 = sub(b, a), sub(c, a)
+            h = cross(direction, e2)
+            det = dot(e1, h)
+            if abs(det) < 1e-8:
+                return False
+            s = sub(origin, a)
+            u = dot(s, h)/det
+            q = cross(s, e1)
+            v, t = dot(direction, q)/det, dot(e2, q)/det
+            return 0 <= u <= 1 and 0 <= v and u+v <= 1 and .003 < t < .4
+        for kind in ("sedan", "suv"):
+            model = json.loads(self.get(f"/assets/models/city-{kind}-v1.json")[2])
+            glass = [b for b in model["batches"].values() if b["component"] == "glass"]
+            body = [b for b in model["batches"].values() if b["component"] == "body"]
+            samples = 0
+            for batch in glass:
+                for i in range(0, len(batch["positions"]), 9):
+                    triangle = [batch["positions"][i+j:i+j+3] for j in (0, 3, 6)]
+                    center = [sum(v[axis] for v in triangle)/3 for axis in range(3)]
+                    direction = batch["normals"][i:i+3]
+                    if center[0] < .35 or abs(center[2]) > .4 or abs(direction[0]) < .4:
+                        continue
+                    if direction[0] < 0:
+                        direction = [-v for v in direction]
+                    samples += 1
+                    for opaque in body:
+                        p = opaque["positions"]
+                        self.assertFalse(any(hit(center, direction, p[j:j+3], p[j+3:j+6], p[j+6:j+9])
+                                             for j in range(0, len(p), 9)), f"{kind}: windscreen hidden by body")
+            self.assertGreaterEqual(samples, 2, f"{kind}: missing front windscreen samples")
 
     def test_final_vehicle_models_export_blender_corner_normals(self):
         generator = (Path(__file__).resolve().parents[2] / "tools" / "art" / "build_city_vehicles.py").read_text(encoding="utf-8")

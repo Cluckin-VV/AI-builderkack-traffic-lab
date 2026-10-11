@@ -570,9 +570,13 @@ async function loadVehicleAsset(type) {
         pivot=new THREE.Group();pivot.name=`wheel-pivot-${b.wheel_id}`;pivot.userData.vehicleWheelId=b.wheel_id;
         const center=asset.wheel_centers?.[b.wheel_id] ?? [0,0,0];pivot.position.set(...center);
         pivot.userData.wheelRadius=group.userData.wheelRadius;
+        const spin=new THREE.Group();spin.name=`wheel-spin-${b.wheel_id}`;
+        spin.userData.vehicleWheelSpin=true;pivot.add(spin);
         wheelPivots.set(b.wheel_id,pivot);group.add(pivot);
       }
-      pivot.add(m);
+      // Calipers steer with the knuckle, but do not spin with the tire/disc.
+      if(b.component === "brake_caliper")pivot.add(m);
+      else pivot.children.find(child=>child.userData.vehicleWheelSpin).add(m);
     } else group.add(m);
   }
   group.userData.wheelPivots=wheelPivots;

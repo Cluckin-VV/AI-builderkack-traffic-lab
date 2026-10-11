@@ -246,7 +246,8 @@ export class TransitWorld {
     const model=this.vehicleTemplates[vehicle.type].clone(true);
     vehicle.wheelGroups=[];vehicle.wheelPivots=new Map();vehicle.brakeLights=[];vehicle.model=model;
     model.traverse(child=>{
-      if(child.userData.vehicleWheelId){child.userData.wheelRadius=model.userData.wheelRadius;vehicle.wheelGroups.push(child);vehicle.wheelPivots.set(child.userData.vehicleWheelId,child);}
+      if(child.userData.vehicleWheelId)vehicle.wheelPivots.set(child.userData.vehicleWheelId,child);
+      if(child.userData.vehicleWheelSpin){child.userData.wheelRadius=model.userData.wheelRadius;vehicle.wheelGroups.push(child);}
       if(child.userData.component==='brake_lamp'){
         child.material=child.material.clone();child.material.emissiveIntensity=.12;vehicle.brakeLights.push(child);
       }
