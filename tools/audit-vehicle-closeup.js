@@ -1,6 +1,7 @@
 // Actual Three.js + production loader inspection, not a Blender still.
 async (page) => {
   await page.bringToFront();
+  const prefix = new URL(page.url()).hostname === '127.0.0.1' ? '' : 'public-';
   await page.evaluate(async () => {
     const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js');
     const identity = await (await fetch('/health')).json();
@@ -59,10 +60,10 @@ async (page) => {
   const result = {};
   for(const kind of ['sedan','suv','bus']) {
     result[kind]=await page.evaluate(kind=>window.vehicleAudit.show(kind),kind);
-    await page.screenshot({path:`output/playwright/vehicle-cabin-${kind}-browser.png`});
+    await page.screenshot({path:`output/playwright/${prefix}vehicle-cabin-${kind}-browser.png`});
   }
   await page.evaluate(()=>window.vehicleAudit.show('sedan',true));
-  await page.screenshot({path:'output/playwright/vehicle-cabin-sedan-rear-browser.png'});
+  await page.screenshot({path:`output/playwright/${prefix}vehicle-cabin-sedan-rear-browser.png`});
   await page.evaluate(()=>window.vehicleAudit.dispose());
   return {wheelAssembliesVerified:true,models:result};
 }

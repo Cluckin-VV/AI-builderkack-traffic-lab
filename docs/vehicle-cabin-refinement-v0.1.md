@@ -33,3 +33,13 @@ GitHub remote check failed: `schannel: server closed abruptly (missing close_not
 ### 2026-10-12 follow-up
 
 The validated correction was committed as `9362a5a`. Recalculating weighted normals after wheel-hole booleans was tried and visually rejected: it intensified arch highlights. The generator was restored to the validated design and assets regenerated; runtime JSON is identical to the validated commit (fingerprint `4a9206eba9ef`). Blender/GLB binaries were re-exported. Python **310 passed in 20.412s** and the browser wheel-assembly audit passed again. This experiment does not count as a realism improvement. GitHub connectivity recovered; remote main was independently read as `c005b6f`. Publication is pending verification below.
+
+### Verified public release
+
+- Normal push and fetch succeeded; local and remote source HEAD `46b23f6d0209505c79f9bff0712d6651fef1a746` matched.
+- Existing free Render service, auto-deploy off; single deploy `dep-db6305flk1mc73bo2s00` became **live at 2026-10-12T00:57:03Z**.
+- Public `/health`: App `0.8.0`, Command `0.3`, SceneAction `0.3`, fingerprint `4a9206eba9ef`, git `46b23f6`, started `2026-10-12T00:56:54.886510+00:00`.
+- Public production-loader close-ups passed all wheel checks; sedan screenshot visually inspected. Evidence uses `public-vehicle-cabin-` filenames to preserve local captures.
+- Public real-UI preview/cancel/confirm/undo passed; console zero errors/warnings.
+- Render error-level log query from 00:57:03 to 00:57:50 returned no entries. This is a short post-deploy window, not a long-run stability claim.
+- Follow-up changes are documentation and inspection-harness output paths only; no extra deployment needed for these.
