@@ -29,3 +29,7 @@ Bodies remain stylized: broad flat panels, simplified door seams and lamps, opaq
 ## Publication
 
 GitHub remote check failed: `schannel: server closed abruptly (missing close_notify)`. Not pushed or deployed this pass. Authentication, remote configuration, history and Render resources were not changed. Local fingerprint must not be presented as public deployment identity.
+
+### 2026-10-12 follow-up
+
+The validated correction was committed as `9362a5a`. Recalculating weighted normals after wheel-hole booleans was tried and visually rejected: it intensified arch highlights. The generator was restored to the validated design and assets regenerated; runtime JSON is identical to the validated commit (fingerprint `4a9206eba9ef`). Blender/GLB binaries were re-exported. Python **310 passed in 20.412s** and the browser wheel-assembly audit passed again. This experiment does not count as a realism improvement. GitHub connectivity recovered; remote main was independently read as `c005b6f`. Publication is pending verification below.
