@@ -25,4 +25,6 @@ Body panels still look stylized and wheel-arch highlights have visible discontin
 
 ## Publication
 
-Pending normal push, existing free Render deployment and public fingerprint/browser verification. Do not identify this candidate as live until those checks complete.
+Source commit `5878ca14e32d165aab68d734838eab1e5bb65290` was normally pushed and deployed to the existing free service. Deployment `dep-db6okjou01pc73av97og` became live at 2026-10-13T01:34:50Z. Public health independently returned fingerprint `f2143595f8dc`, git `5878ca1`, started 2026-10-13T01:34:46.783369Z.
+
+Public production-loader checks and preview/cancel/confirm/undo passed. Public sedan screenshot was visually inspected. A fresh browser session after deployment had zero console errors/warnings. An earlier session recorded 503/501/favicon404 during cold-start/switch-over; these were not hidden or treated as successful loads. Render error-level logs from 01:34:50 through 01:35:37Z contained no entries (short window only). Follow-up commits only record evidence and do not require another deploy.
