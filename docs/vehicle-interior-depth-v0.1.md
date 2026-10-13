@@ -19,6 +19,8 @@ Glass uses alpha 0.52, front faces, no depth writing and no shadow casting. This
 
 ## Remaining limitations
 
+Follow-up near-1080p sample: **1921×1081**, same 24/rain/street/balanced settings, 30.027 seconds / 909 frames (**30.27 FPS**), p95 **41.6 ms**, no >250 ms frames, geometry/textures unchanged. Traffic had moved and visible draw calls rose to 947, so this is not a controlled resolution comparison. The slower sample is important: consistent 30+ FPS is not yet proven and performance remains an open item.
+
 Body panels still look stylized and wheel-arch highlights have visible discontinuities. Interior proportions/detail are simplified; no suspension simulation, driver animation or physical refraction. Bus interior was not upgraded. This is a verifiable incremental improvement, not the requested final realism level. The 30-second sample is not a ten-minute stability test or a guarantee for all devices.
 
 ## Publication
