@@ -258,6 +258,9 @@ def build(kind, length, width, color, suv=False):
         (half, full_width * .40, .40, .72),
     ]
     body = profile("Sculpted one-piece painted body", sections, paint)
+    normal_reference = body.copy()
+    normal_reference.data = body.data.copy()
+    bpy.context.collection.objects.link(normal_reference)
     # Actual wheel openings, not a solid body hidden behind protruding tires.
     for x in (-wheel_x, wheel_x):
         cutter = cylinder("Temporary wheel opening", (x, 0, wheel_z), tire_r+.045,
@@ -269,6 +272,17 @@ def build(kind, length, width, color, suv=False):
         bpy.context.view_layer.objects.active = body
         bpy.ops.object.modifier_apply(modifier=modifier.name)
         bpy.data.objects.remove(cutter, do_unlink=True)
+    # Preserve the uncut exterior's shading; do not project normals onto deep
+    # wheel-well faces that did not exist in the reference shell.
+    transfer = body.modifiers.new("Restore continuous exterior shading", "DATA_TRANSFER")
+    transfer.object = normal_reference
+    transfer.use_loop_data = True
+    transfer.data_types_loops = {'CUSTOM_NORMAL'}
+    transfer.loop_mapping = 'POLYINTERP_NEAREST'
+    transfer.use_max_distance = True
+    transfer.max_distance = .003
+    bpy.ops.object.modifier_apply(modifier=transfer.name)
+    bpy.data.objects.remove(normal_reference, do_unlink=True)
     cube("Front energy-absorbing bumper", (half - .10, 0, .48), (.20, width * .91, .25), secondary, .075)
     cube("Rear energy-absorbing bumper", (-half + .10, 0, .47), (.20, width * .91, .23), secondary, .07)
     cube("Full-width front lower intake", (half - .035, 0, .61), (.045, width * .57, .17), grille, .035)
