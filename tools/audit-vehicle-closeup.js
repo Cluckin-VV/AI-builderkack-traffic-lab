@@ -9,7 +9,14 @@ async (page) => {
     const assets = await art.loadVehicleAssets();
     for (const [kind, model] of Object.entries(assets)) {
       let wheels = 0;
+      let glazing = 0, interior = 0;
       model.traverse(pivot => {
+        if(kind !== 'bus' && pivot.userData.component === 'glass') {
+          glazing++;
+          if(!pivot.material.transparent || pivot.material.depthWrite || pivot.material.opacity > .6)
+            throw Error(kind+': glazing hides modeled cabin');
+        }
+        if(pivot.userData.component === 'seat')interior++;
         if (!pivot.userData.vehicleWheelId) return;
         wheels++;
         const spin = pivot.children.find(c => c.userData.vehicleWheelSpin);
@@ -23,6 +30,7 @@ async (page) => {
         spin.rotation.z = 0;
       });
       if (wheels !== 4) throw Error(kind+': expected four wheel pivots');
+      if(kind !== 'bus' && (!glazing || !interior))throw Error(kind+': missing cabin depth');
     }
     const overlay = document.createElement('div');
     overlay.id = 'vehicle-audit';

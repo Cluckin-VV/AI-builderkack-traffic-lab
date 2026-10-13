@@ -16,6 +16,21 @@ from ai_builder.server import SceneHandler, STATIC_DIR
 
 
 class VisualAssetTests(unittest.TestCase):
+    def test_passenger_glazing_has_interior_depth_and_bounded_opacity(self):
+        for kind in ("sedan", "suv"):
+            model = json.loads((STATIC_DIR / "models" / f"city-{kind}-v1.json").read_text())
+            batches = list(model["batches"].values())
+            glazing = [b for b in batches if b["component"] == "glass"]
+            self.assertTrue(glazing)
+            for pane in glazing:
+                self.assertGreaterEqual(pane.get("opacity", 1), .2)
+                self.assertLessEqual(pane.get("opacity", 1), .6)
+            for component in ("seat", "dashboard", "steering_wheel"):
+                parts = [b for b in batches if b["component"] == component]
+                self.assertTrue(parts, f"{kind} missing visible {component}")
+                for part in parts:
+                    self.assertLess(max(part["positions"][1::3]), model["bounds"]["max"][1])
+
     def setUp(self):
         class Handler(SceneHandler):
             state = SceneState()

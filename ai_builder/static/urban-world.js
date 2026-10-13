@@ -554,14 +554,18 @@ async function loadVehicleAsset(type) {
     geo.setAttribute("normal",new THREE.Float32BufferAttribute(b.normals,3));geo.computeBoundingSphere();
     const color=new THREE.Color().setRGB(...b.color);
     const isGlass=b.component === "glass";
+    const opacity=isGlass ? Math.min(1,Math.max(.2,b.opacity ?? 1)) : 1;
+    const tinted=isGlass && opacity<1;
     const mat=new THREE.MeshPhysicalMaterial({color,roughness:b.roughness,metalness:b.metalness,
       clearcoat:b.clearcoat ?? (b.component === "body" ? .55 : 0),
       clearcoatRoughness:b.clearcoat_roughness ?? .2,
-      // Balanced uses reflection glass; real transmission requires a costly extra scene pass.
+      // Alpha glazing reveals modeled cabins without an extra refraction pass.
       transmission:0,thickness:isGlass ? .025 : 0,
-      transparent:false,side:isGlass ? THREE.DoubleSide : THREE.FrontSide,
+      opacity,transparent:tinted,depthWrite:!tinted,
+      side:isGlass && !tinted ? THREE.DoubleSide : THREE.FrontSide,
       emissive:b.emission?color:0,emissiveIntensity:b.emission,envMapIntensity:1});
     const m=new THREE.Mesh(geo,mat);m.name=name;m.userData.component=b.component ?? "body";m.castShadow=true;m.receiveShadow=true;
+    if(tinted){m.castShadow=false;m.receiveShadow=false;}
     if(m.userData.component === "brake_lamp") brakeLamps.push(m);
     if(m.userData.component === "headlamp") headLamps.push(m);
     if(b.wheel_id) {

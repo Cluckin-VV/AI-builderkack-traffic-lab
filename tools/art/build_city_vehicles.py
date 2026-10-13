@@ -226,13 +226,17 @@ def build(kind, length, width, color, suv=False):
     clear_scene()
     paint = mat(kind + " deep metallic enamel", color, .24, .29, coat=.72, coat_rough=.16)
     secondary = mat(kind + " satin lower trim", (.025, .034, .039), .24, .34, coat=.22, coat_rough=.25)
-    glass = mat("Layered blue-black automotive glass", (.028, .048, .062), .08, .13, coat=.48, coat_rough=.10)
+    glass = mat("Tinted automotive glazing", (.06, .09, .12), .08, .13, coat=.48, coat_rough=.10)
+    glass.node_tree.nodes["Principled BSDF"].inputs["Alpha"].default_value = .52
+    glass.surface_render_method = 'DITHERED'
+    upholstery = mat("Charcoal woven upholstery", (.09, .085, .075), 0, .88)
     rubber = mat("Road tire rubber", (.012, .016, .019), .02, .86)
     alloy = mat("Forged satin alloy", (.50, .57, .59), .82, .20, coat=.18, coat_rough=.16)
     rotor = mat("Ventilated brake rotor", (.19, .22, .23), .76, .30)
     caliper = mat("Performance brake caliper", (.72, .055, .022), .34, .27, coat=.35, coat_rough=.18)
     grille = mat("Graphite intake mesh", (.015, .020, .022), .34, .45)
     headlamp = mat("LED projector lens", (.87, .91, .82), .18, .18, .18, coat=.82, coat_rough=.10)
+    mirror_glass = mat("Rear-facing mirror silver", (.62, .68, .72), 1.0, .08)
     brake_lamp = mat("Tail lamp red lens", (.48, .018, .026), .23, .25, .12, coat=.65, coat_rough=.12)
     amber = mat("Amber marker lens", (.92, .30, .035), .08, .25, .1, coat=.45, coat_rough=.16)
     plate = mat("Unbranded registration plate", (.69, .72, .68), .16, .28)
@@ -289,6 +293,30 @@ def build(kind, length, width, color, suv=False):
     roof_front = length * .055
     cabin_half_width = width * (.435 if suv else .405)
     roof_half_width = width * (.40 if suv else .365)
+    # Upper cabin detail is real geometry behind tinted panes. The opaque body
+    # hides the lower cabin; no expensive refractive render pass is required.
+    floor_z = max(body_height, cabin_bottom)+.015
+    cube("Dark cabin floor", ((cabin_front+cabin_rear)/2, 0, floor_z),
+         (cabin_front-cabin_rear-.08, cabin_half_width*1.98, .025), secondary, .01,
+         component="dashboard")
+    for seat_x in (.03, -.77):
+        for side in (-1, 1):
+            seat_y = side * width * .23
+            cube("Seat cushion", (seat_x, seat_y, floor_z+.065),
+                 (.43, .40, .10), upholstery, .04, component="seat")
+            cube("Seat back", (seat_x-.21, seat_y, floor_z+.18),
+                 (.10, .39, .29), upholstery, .04, component="seat", rotation=(0,-.10,0))
+            cube("Seat head restraint", (seat_x-.22, seat_y, floor_z+.335),
+                 (.10, .20, .11), upholstery, .035, component="seat")
+    cube("Dashboard upper pad", (cabin_front-.20, 0, cabin_bottom+.035),
+         (.31, width*.69, .09), secondary, .035, component="dashboard")
+    steering = torus("Steering rim", (cabin_front-.40, -width*.23, cabin_bottom+.16),
+                     .115, .014, secondary, component="steering_wheel")
+    steering.rotation_euler = (0, math.pi/2-.3, 0)
+    cube("Steering center and spoke", (cabin_front-.40, -width*.23, cabin_bottom+.16),
+         (.04, .21, .026), secondary, .008, component="steering_wheel")
+    cube("Steering column", (cabin_front-.31, -width*.23, cabin_bottom+.12),
+         (.23, .035, .04), secondary, .01, component="steering_wheel")
     # The roof, glass and pillars meet on the same four boundaries. Previously
     # a smoothed solid cabin protruded through these sloped glass quads.
     profile("Crowned painted roof", [
@@ -332,6 +360,10 @@ def build(kind, length, width, color, suv=False):
              (.075, mirror_y-foot_y+.02, .055), secondary, .018)
         cube("Aerodynamic side mirror", (mirror_x, side * mirror_y, mirror_z+.025),
              (.27, .14, .17), paint, .065)
+        cube("Rear-facing mirror inset", (mirror_x-.136, side * mirror_y, mirror_z+.025),
+             (.009, .095, .11), secondary, .008)
+        cube("Rear-facing mirror glass", (mirror_x-.142, side * mirror_y, mirror_z+.025),
+             (.003, .080, .092), mirror_glass, .001, component="mirror_glass")
         cube("Mirror indicator", (mirror_x+.05, side * (mirror_y+.074), mirror_z+.025),
              (.13, .012, .028), amber, .01)
         if suv:
@@ -390,8 +422,15 @@ def build(kind, length, width, color, suv=False):
     for side in (-1, 1):
         cube("Projector headlamp housing", (half - .02, side * width * .25, .665),
              (.04, .38, .13), grille, .018)
-        cube("Projector LED", (half - .001, side * width * .25, .67),
-             (.006, .31, .055), headlamp, .003, component="headlamp")
+        for offset in (-.083, .083):
+            bezel = cylinder("Round projector bezel", (half+.003, side*width*.25+offset, .653),
+                             .045, .014, alloy, vertices=24)
+            bezel.rotation_euler = (0, math.pi/2, 0)
+            lens = cylinder("Recessed projector lens", (half+.011, side*width*.25+offset, .653),
+                            .033, .004, headlamp, "headlamp", vertices=24)
+            lens.rotation_euler = (0, math.pi/2, 0)
+        cube("Upper daytime running light", (half+.004, side*width*.25, .707),
+             (.006, .29, .012), headlamp, .003, component="headlamp")
         cube("Tail lamp dark surround", (-half + .02, side * width * .27, .665),
              (.04, .34, .13), secondary, .018)
         cube("Adaptive brake light", (-half + .001, side * width * .27, .67),
@@ -457,6 +496,7 @@ def build(kind, length, width, color, suv=False):
         batch["roughness"] = node.inputs["Roughness"].default_value
         batch["metalness"] = node.inputs["Metallic"].default_value
         batch["emission"] = node.inputs["Emission Strength"].default_value
+        batch["opacity"] = node.inputs["Alpha"].default_value
         coat_socket = node.inputs.get("Coat Weight")
         coat_roughness_socket = node.inputs.get("Coat Roughness")
         batch["clearcoat"] = coat_socket.default_value if coat_socket is not None else 0.0

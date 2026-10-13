@@ -19,13 +19,18 @@ async (page) => {
   for(let attempt=0;attempt<4;attempt++) {
     await page.waitForFunction(() => {
       const c=document.querySelector('#scene-root canvas');
-      return Math.abs(c.width-c.getBoundingClientRect().width*devicePixelRatio)<2;
+      return c.width>0 && c.height>0;
     });
     const extent=await page.evaluate(() => {
       const c=document.querySelector('#scene-root canvas');return {w:c.width,h:c.height,vw:innerWidth,vh:innerHeight};
     });
     if(Math.abs(extent.w-1920)<=1 && Math.abs(extent.h-1080)<=1)break;
-    await page.setViewportSize({width:Math.round(extent.vw+1920-extent.w),height:Math.round(extent.vh+1080-extent.h)});
+    const ratio=await page.evaluate(() => {
+      const c=document.querySelector('#scene-root canvas');
+      return c.width/c.getBoundingClientRect().width;
+    });
+    await page.setViewportSize({width:Math.round(extent.vw+(1920-extent.w)/ratio),height:Math.round(extent.vh+(1080-extent.h)/ratio)});
+    await page.evaluate(() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   }
   await page.waitForFunction(() => document.querySelector('#scene-root').dataset.atmosphereTransition==='settled');
   await page.screenshot({path:'output/playwright/soak-rain-24-start.png',scale:'css'});
