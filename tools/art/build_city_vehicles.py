@@ -257,6 +257,20 @@ def build(kind, length, width, color, suv=False):
         (half - .22, full_width * .46, .39, .86),
         (half, full_width * .40, .40, .72),
     ]
+    if suv:
+        # Keep the cabin-length upper body below its glazing. The two extra
+        # shoulder sections join the hatch and bonnet to this continuous sill.
+        sections = [
+            (-half, full_width * .40, .39, .73),
+            (-half + .22, full_width * .48, .39, .91),
+            (-length * .38, full_width * .50, .40, 1.00),
+            (-length * .31, full_width * .50, .40, 1.00),
+            (-.20, full_width * .48, .42, 1.00),
+            (length * .22, full_width * .50, .40, 1.00),
+            (length * .27, full_width * .50, .40, 1.04),
+            (half - .22, full_width * .46, .39, .86),
+            (half, full_width * .40, .40, .72),
+        ]
     body = profile("Sculpted one-piece painted body", sections, paint)
     normal_reference = body.copy()
     normal_reference.data = body.data.copy()
@@ -301,15 +315,15 @@ def build(kind, length, width, color, suv=False):
 
     roof_z = 1.74 if suv else 1.48
     cabin_bottom = 1.09 if suv else .96
-    cabin_rear = -length * .34
+    cabin_rear = -length * (.36 if suv else .34)
     cabin_front = length * .23
-    roof_rear = -length * .20
+    roof_rear = -length * (.255 if suv else .20)
     roof_front = length * .055
     cabin_half_width = width * (.435 if suv else .405)
     roof_half_width = width * (.40 if suv else .365)
     # Upper cabin detail is real geometry behind tinted panes. The opaque body
     # hides the lower cabin; no expensive refractive render pass is required.
-    floor_z = max(body_height, cabin_bottom)+.015
+    floor_z = (1.015 if suv else max(body_height, cabin_bottom)+.015)
     cube("Dark cabin floor", ((cabin_front+cabin_rear)/2, 0, floor_z),
          (cabin_front-cabin_rear-.08, cabin_half_width*1.98, .025), secondary, .01,
          component="dashboard")
