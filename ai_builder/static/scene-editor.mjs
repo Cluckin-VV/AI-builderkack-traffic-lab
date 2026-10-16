@@ -56,6 +56,7 @@ export function buildEditorCommand(currentState, targetState) {
     clauses.push(target.scene_layout === 'bus_stop' ? '创建公交站情境' : '恢复十字路口');
   }
   const deltas = VEHICLES.map(type => [type, target[type] - current[type]]);
+  const vehicleActions = deltas.reduce((total, [, delta]) => total + Math.abs(delta), 0);
   for (const [type, delta] of deltas) if (delta < 0) clauses.push(phrase(type, -delta, true));
   for (const [type, delta] of deltas) if (delta > 0) clauses.push(phrase(type, delta, false));
   if (target.weather !== current.weather) {
@@ -64,6 +65,11 @@ export function buildEditorCommand(currentState, targetState) {
   if (target.traffic_light !== current.traffic_light) {
     clauses.push({ '红灯': '把信号灯变成红灯', '黄灯': '把信号灯变成黄灯', '绿灯': '把信号灯变成绿灯' }[target.traffic_light]);
   }
-  if (clauses.length > 6) throw new RangeError('一个原子预演最多包含 6 个动作');
+  const otherActions = Number(target.scene_layout !== current.scene_layout)
+    + Number(target.weather !== current.weather)
+    + Number(target.traffic_light !== current.traffic_light);
+  if (vehicleActions + otherActions > 6) {
+    throw new RangeError('一个原子预演最多包含 6 个动作；请分次调整车辆数量');
+  }
   return clauses.join('然后');
 }

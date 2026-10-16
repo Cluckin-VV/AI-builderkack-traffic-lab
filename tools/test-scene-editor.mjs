@@ -47,3 +47,18 @@ test('editor rejects invalid target values before creating a plan', () => {
     { scene_layout: 'crossroads', buses: 13, weather: 'clear', traffic_light: '绿灯' },
   ), /buses/);
 });
+
+test('editor counts expanded vehicle actions, not just command clauses', () => {
+  assert.throws(() => buildEditorCommand(
+    { sedan: 6, suv: 4, buses: 2 },
+    { sedan: 1, suv: 1, buses: 0 },
+  ), /最多包含 6 个动作/);
+  assert.equal(buildEditorCommand(
+    { sedan: 6, suv: 4, buses: 2 },
+    { sedan: 3, suv: 2, buses: 1 },
+  ), '删除三辆小轿车然后删除两辆SUV然后删除一辆公交车');
+  assert.throws(() => buildEditorCommand(
+    { sedan: 6, suv: 4, buses: 2, weather: 'clear' },
+    { sedan: 3, suv: 2, buses: 1, weather: 'rain' },
+  ), /最多包含 6 个动作/);
+});
