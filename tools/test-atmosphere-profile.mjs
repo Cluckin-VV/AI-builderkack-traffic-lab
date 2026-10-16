@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, architecturalLightLevel } from '../ai_builder/static/atmosphere-profile.mjs';
+import { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, architecturalLightLevel, vehicleHeadlampLevel } from '../ai_builder/static/atmosphere-profile.mjs';
 
 test('weather changes blend rather than jumping on confirmation', () => {
   const blend = new AtmosphereTransition();
@@ -50,6 +50,15 @@ test('window lighting clamps bad input without emitting nonfinite intensity', ()
     assert.ok(Number.isFinite(architecturalLightLevel(value)));
   assert.equal(architecturalLightLevel(-4),architecturalLightLevel(0));
   assert.equal(architecturalLightLevel(8),architecturalLightLevel(1));
+});
+test('vehicle lamps brighten in rain, fog and blue hour while remaining bounded', () => {
+  const clear=vehicleHeadlampLevel({clear:1},0);
+  assert.equal(clear,.12);
+  assert.ok(vehicleHeadlampLevel({rain:1},0)>clear);
+  assert.ok(vehicleHeadlampLevel({fog:1},0)>vehicleHeadlampLevel({rain:1},0));
+  assert.equal(vehicleHeadlampLevel({clear:1},1),1.2);
+  for(const input of [NaN,Infinity,-4,8])
+    assert.ok(vehicleHeadlampLevel({fog:input},input)>=.12 && vehicleHeadlampLevel({fog:input},input)<=1.2);
 });
 test('named cameras have immutable finite metre-scale poses', () => {
   assert.deepEqual(Object.keys(CAMERA_PROFILES),['bird','street','corner']);

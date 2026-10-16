@@ -232,7 +232,7 @@ export class TransitWorld {
     group.scale.setScalar(0.01);
     group.userData.targetScale = 1;
     this.scene.add(group);
-    const vehicle={id:descriptor.id,type:descriptor.type,group,wheelGroups:[],wheelPivots:new Map(),brakeLights:[],lastS:null,
+    const vehicle={id:descriptor.id,type:descriptor.type,group,wheelGroups:[],wheelPivots:new Map(),brakeLights:[],headLights:[],lastS:null,
       model:null,bodyDynamics:{wheelSpin:0,steeringAngle:0,pitch:0,roll:0,previousSpeed:0,previousYaw:null}};
     if(this.vehicleTemplates?.[descriptor.type])this.attachVehicleTemplate(vehicle);
     return vehicle;
@@ -244,12 +244,15 @@ export class TransitWorld {
       if(Array.isArray(child.material))child.material.forEach(material=>material.dispose());else child.material?.dispose();
     }
     const model=this.vehicleTemplates[vehicle.type].clone(true);
-    vehicle.wheelGroups=[];vehicle.wheelPivots=new Map();vehicle.brakeLights=[];vehicle.model=model;
+    vehicle.wheelGroups=[];vehicle.wheelPivots=new Map();vehicle.brakeLights=[];vehicle.headLights=[];vehicle.model=model;
     model.traverse(child=>{
       if(child.userData.vehicleWheelId)vehicle.wheelPivots.set(child.userData.vehicleWheelId,child);
       if(child.userData.vehicleWheelSpin){child.userData.wheelRadius=model.userData.wheelRadius;vehicle.wheelGroups.push(child);}
       if(child.userData.component==='brake_lamp'){
         child.material=child.material.clone();child.material.emissiveIntensity=.12;vehicle.brakeLights.push(child);
+      }
+      if(child.userData.component==='headlamp'){
+        child.material=child.material.clone();child.material.emissiveIntensity=.12;vehicle.headLights.push(child);
       }
     });
     vehicle.groundOffset=model.userData.groundOffset;
@@ -260,6 +263,7 @@ export class TransitWorld {
     const requested = descriptors.slice(0, MAX_VEHICLES);
     const wanted = new Map(requested.map(item => [item.id,item]));
     for (const vehicle of [...this.vehicles]) if (!wanted.has(vehicle.id)) {
+      for(const lamp of [...vehicle.brakeLights,...vehicle.headLights])lamp.material.dispose();
       this.scene.remove(vehicle.group); this.vehicles.splice(this.vehicles.indexOf(vehicle),1);
     }
     const existing = new Set(this.vehicles.map(vehicle => vehicle.id));

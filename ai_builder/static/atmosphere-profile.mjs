@@ -34,6 +34,19 @@ export function lightingFogBrightness(blueWeight) {
   return 1 - .65 * blue;
 }
 
+// Vehicle lenses follow the same visual transition as the sky and wet road.
+// This is emissive material only; it adds no per-vehicle dynamic lights.
+export function vehicleHeadlampLevel(weatherWeights, blueWeight) {
+  const bounded = value => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
+  const need = Math.max(
+    bounded(weatherWeights?.rain) * .82,
+    bounded(weatherWeights?.fog) * .92,
+    bounded(weatherWeights?.snow) * .48,
+    bounded(blueWeight),
+  );
+  return Math.min(1.2, .12 + 1.08 * need);
+}
+
 // Presentation history: rain wets quickly, but pavement dries gradually after it stops.
 // This never changes the selected weather or the domain snapshot.
 export class SurfaceWetness {
