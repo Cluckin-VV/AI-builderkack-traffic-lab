@@ -105,7 +105,7 @@ for y in [-.56,.56]:
     w=cube("Windscreen wiper",(4.667,y,2.0),(.025,.035,.53),black,.008)
     w.rotation_euler.x=.32
     cube("Headlight surround",(4.71,y*1.45,1.13),(.08,.38,.22),black,.045)
-    cube("Headlight",(4.757,y*1.45,1.14),(.027,.26,.105),white,.025)
+    cube("Headlight",(4.757,y*1.45,1.14),(.027,.26,.105),white,.025)["transit_component"]="headlamp"
     cube("Rear light",(-4.70,y*1.65,1.44),(.035,.13,.45),red,.028)["transit_component"]="brake_lamp"
 cube("Front badge",(4.735,0,1.42),(.035,.36,.08),metal,.01)
 cube("Number plate",(4.76,0,.77),(.022,.48,.13),teal,.01)
