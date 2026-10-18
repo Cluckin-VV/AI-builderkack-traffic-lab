@@ -24,6 +24,7 @@ const editorForm = document.querySelector("#scene-editor-form");
 const undoButton = document.querySelector("#undo-last");
 const previewBadge = document.querySelector("#preview-badge");
 const resumeAutoSignalButton = document.querySelector("#resume-auto-signal");
+const cameraControls = ["#camera-mode", "#corner-camera", "#reset-camera"].map(selector => document.querySelector(selector));
 
 const labels = {
   add_bus: "增加公交车",
@@ -70,6 +71,10 @@ let visualPaused = false;
 let eventCount = 0;
 let pendingPlanId = null;
 let pendingUndoOf = null;
+
+function setCameraControlsReady(ready) {
+  for (const control of cameraControls) control.disabled = !ready;
+}
 
 function updateUndoControl(undo) {
   const available = Boolean(undo?.available && undo?.change_id);
@@ -313,6 +318,7 @@ async function loadWorld() {
       fallback.hidden = false;
     });
     world.syncState(lastScene);
+    setCameraControlsReady(true);
   } catch (error) {
     console.error("WebGL scene module failed to load", error);
     fallback.hidden = false;

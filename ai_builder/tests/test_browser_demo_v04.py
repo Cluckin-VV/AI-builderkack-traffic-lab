@@ -43,6 +43,16 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertIn("让天气下暴雪", page)
         self.assertIn("让天气下陨石", page)
 
+    def test_camera_controls_wait_for_the_webgl_world(self):
+        _, page_body = self.get("/")
+        _, app_body = self.get("/assets/app.js")
+        page = page_body.decode("utf-8")
+        app = app_body.decode("utf-8")
+        self.assertIn('id="camera-mode"', page)
+        self.assertIn('id="camera-mode" type="button" aria-pressed="false" title="3D 场景加载完成后，可切换斜俯视与街景机位" disabled', page)
+        self.assertIn('const cameraControls = ["#camera-mode", "#corner-camera", "#reset-camera"]', app)
+        self.assertIn("setCameraControlsReady(true);", app)
+
     def test_static_assets_have_explicit_content_types(self):
         expected = {
             "/assets/app.css": "text/css",
