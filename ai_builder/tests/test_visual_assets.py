@@ -108,6 +108,8 @@ class VisualAssetTests(unittest.TestCase):
                 components = {batch.get("component") for batch in model["batches"].values()}
                 self.assertIn("tire_tread", components)
                 self.assertIn("brake_caliper", components)
+                self.assertIn("five_lug_nuts", model.get("wheel_detail", []))
+                self.assertIn("alternating_tread_blocks", model.get("wheel_detail", []))
                 self.assertIn("door_gap", components)
 
     def test_passenger_tires_have_open_hubs_and_concentric_axles(self):

@@ -464,6 +464,33 @@ def build(kind, length, width, color, suv=False):
             torus("Tire shoulder tread " + wheel_id,
                   (x, side * (width * .49), wheel_z), tire_r * .955, .018,
                   rubber, component="tire_tread", wheel_id=wheel_id)
+            # Real tires show a pattern at the shoulder, not just a perfectly
+            # smooth rubber torus.  These small, alternating blocks stay inside
+            # the existing wheel pivot, so they turn exactly with the tire and
+            # do not add another runtime draw call or a fake physics system.
+            for tread_index in range(32):
+                angle = math.tau * tread_index / 32
+                radial_x, radial_z = math.cos(angle), math.sin(angle)
+                stagger = (-.016 if tread_index % 2 else .016)
+                cube("Alternating tire tread " + wheel_id,
+                     (x + radial_x * (tire_r * 1.001),
+                      side * (width * .49 + stagger),
+                      wheel_z + radial_z * (tire_r * 1.001)),
+                     # Hard-edge tread blocks are intentional: beveling every
+                     # micro block multiplied the SUV mesh by ~18k triangles.
+                     (.020, depth * .40, tire_r * .105), rubber, 0,
+                     component="tire_tread", wheel_id=wheel_id,
+                     rotation=(0, -angle, 0))
+            # Five exposed lug nuts give the open alloy wheel a believable
+            # mechanical centre.  They share the existing alloy material and
+            # rotate with the wheel; brake calipers remain on the knuckle.
+            for lug_index in range(5):
+                angle = math.tau * lug_index / 5
+                cylinder("Alloy lug nut " + wheel_id,
+                         (x + math.cos(angle) * tire_r * .24,
+                          side * (width * .49 + .178),
+                          wheel_z + math.sin(angle) * tire_r * .24),
+                         tire_r * .042, .035, alloy, "wheel", wheel_id, 16)
             # The caliper is deliberately a separate named component so the
             # browser can preserve a convincing wheel/brake reading.
             cube("Performance brake caliper " + wheel_id,
@@ -574,6 +601,7 @@ def build(kind, length, width, color, suv=False):
         "format": "transit-mesh-v1", "generator": "Blender " + bpy.app.version_string,
         "units": "metres", "vehicle_type": kind,
         "design": "original game-ready GT sport sedan" if not suv else "original game-ready urban SUV",
+        "wheel_detail": ["open_alloy", "five_lug_nuts", "alternating_tread_blocks", "fixed_caliper"],
         "wheel_radius": tire_r,
         "body_dimensions": {"length": length, "height": round(maximum[1] - minimum[1], 3), "width": width},
         "overall_dimensions": {"length": round(maximum[0] - minimum[0], 3),
