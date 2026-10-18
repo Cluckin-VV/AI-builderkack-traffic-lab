@@ -49,3 +49,9 @@ The SUV front lamps are now two original matrix-style rectangular units with a n
 Local browser verification used the actual Three.js production loader, not a Blender still. It confirmed three models, four independently spinning wheel assemblies each, transparent passenger glazing with modeled cabin depth, stationary brake calipers, and zero console errors/warnings. The SUV inspection image is `output/playwright/vehicle-cabin-suv-browser.png`; it remains visibly stylized, especially in the broad front volume and simplified panel gaps. This is an exterior readability improvement, not a claim of GT-style photorealism or a universal performance guarantee.
 
 Regression evidence: JavaScript `59/59`; Python `311/311` (`20.990s`). The local runtime fingerprint for these regenerated static assets is `e6f1c884ce7b` before commit metadata changes. Public deployment verification is pending normal GitHub sync and the existing free Render service rollout.
+
+### Public verification
+
+Commit `a63500229650adc68a031ea372747110ebd5f252` was pushed normally to `main`, then the existing Render free service was manually deployed as `dep-dba6fodg1s2s73ava5r0`. It reached `live` at `2026-10-18T06:33:18Z`; no new service or paid resource was created. Public `/health` returned app `0.8.0`, command protocol `0.3`, SceneAction `0.3`, source fingerprint `a058b1d15ff2`, and git `a635002`.
+
+A freshly opened public browser loaded `/assets/app.js?v=a058b1d15ff2`, matching `/health`. The production-loader audit rechecked all three vehicle assets (four independently animated wheel assemblies each, passenger glass/cabin depth, fixed brake calipers) and captured the updated SUV close-up. Console result: zero errors and zero warnings. The audit is a focused model/runtime verification; it does not replace the separately tested preview/confirm/undo flow or establish a full-device frame-rate claim.
