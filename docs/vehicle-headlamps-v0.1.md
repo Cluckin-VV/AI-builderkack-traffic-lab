@@ -55,3 +55,11 @@ Regression evidence: JavaScript `59/59`; Python `311/311` (`20.990s`). The local
 Commit `a63500229650adc68a031ea372747110ebd5f252` was pushed normally to `main`, then the existing Render free service was manually deployed as `dep-dba6fodg1s2s73ava5r0`. It reached `live` at `2026-10-18T06:33:18Z`; no new service or paid resource was created. Public `/health` returned app `0.8.0`, command protocol `0.3`, SceneAction `0.3`, source fingerprint `a058b1d15ff2`, and git `a635002`.
 
 A freshly opened public browser loaded `/assets/app.js?v=a058b1d15ff2`, matching `/health`. The production-loader audit rechecked all three vehicle assets (four independently animated wheel assemblies each, passenger glass/cabin depth, fixed brake calipers) and captured the updated SUV close-up. Console result: zero errors and zero warnings. The audit is a focused model/runtime verification; it does not replace the separately tested preview/confirm/undo flow or establish a full-device frame-rate claim.
+
+## Layered SUV front fascia — 2026-10-18
+
+The next close-up pass replaces the flat single-plane SUV nose with original layered geometry: a recessed upper grille, three horizontal fins, lower crossblade, and outer intake fins. The output is deliberately generic—there is no copied grille outline, badge, or production-model reference. The lamp units remain the weather-responsive matrix-style assets from the previous pass.
+
+The current SUV browser audit is `36,172` triangles and `41` draw calls, compared with `34,856` triangles and `41` draw calls before this fascia change. The update increases close-range silhouette readability without adding draw calls. Full regression passed: JavaScript `59/59`; Python `311/311` (`20.617s`).
+
+Commit `d16614b90a2d670d7935009f80144f09860c3384` was normally pushed and deployed to the same existing Render free service as `dep-dba6i5om7kps73fm017g`, live at `2026-10-18T06:38:17Z`. Public `/health`: source fingerprint `c384c9fb7d1b`, git `d16614b`. A newly opened public browser loaded the matching fingerprinted app module, passed the complete production-loader vehicle audit, and emitted zero console errors/warnings. The published close-up is `output/playwright/public-vehicle-cabin-suv-browser.png`. It demonstrates a better structured low-to-mid-poly vehicle asset—not a claim of photoreal game-car rendering.
