@@ -36,4 +36,6 @@ The public closeup exposed a concrete mismatch with the other two vehicle types:
 
 The browser loader already applies alpha glazing consistently at the chosen quality tier. An asset contract test verifies at least one glass batch with opacity between 0.2 and 0.6, separate seat geometry, and enough cabin triangles to remain visible. The production loader closeup now shows the interior through the window line. It is an early depth pass: seat forms, body panels, and glazing are still stylized rather than vehicle-scan quality.
 
-Local verification: JS 59/59, Python 311/311. The candidate source fingerprint is `8f8dcfcacd64`; it has not yet been pushed or deployed.
+Local verification: JS 59/59, Python 311/311. The candidate source fingerprint is `8f8dcfcacd64`.
+
+The candidate was pushed as `72467a9` and deployed to the existing Render free service as `dep-dba1vieq1p3s73a0oc40`. It became live at `2026-10-18T01:25:41Z`. Public `/health` reports the same source fingerprint and commit. A freshly navigated browser also loaded `/assets/app.js?v=8f8dcfcacd64`; its production-loader audit verified transparent glass, cabin depth, four wheel assemblies per vehicle, and no console errors. The public closeup is retained as `output/playwright/public-vehicle-cabin-bus-browser.png`.
