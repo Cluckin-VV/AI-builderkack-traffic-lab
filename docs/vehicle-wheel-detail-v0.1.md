@@ -40,3 +40,27 @@ The detailed camera is valuable for an evaluator inspecting the models. At the
 normal traffic camera distance, the main readability cues are the moving wheel,
 the wheel-arch clearance, brake lamp state, and correct signal-aware movement;
 it does not imply road-contact tyre physics.
+
+## Public release
+
+Commit `cdd82d7` was pushed normally to `main` and deployed once to the
+existing Render free service. Deploy `dep-dbabgum7bikc73e0lamg` became live at
+2026-10-18T12:17:10Z. Public `/health` returned:
+
+```json
+{
+  "app_version": "0.8.0",
+  "command_protocol_version": "0.3",
+  "scene_action_version": "0.3",
+  "source_fingerprint": "306536663c64",
+  "git_commit": "cdd82d7"
+}
+```
+
+An isolated public-browser session confirmed that the page's fingerprinted
+`app.js` URL matched that health fingerprint. The production loader generated
+fresh public screenshots for all three vehicle classes, including the SUV
+close-up. Its wheel/glazing/cabin assertions completed before screenshots were
+written; console remained at 0 errors and 0 warnings. A later direct attempt
+to return the full 5 MB SUV JSON through the browser CLI exceeded the CLI's
+30-second command window, so that timeout is not treated as a payload proof.
