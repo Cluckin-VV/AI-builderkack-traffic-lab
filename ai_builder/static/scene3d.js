@@ -199,13 +199,17 @@ export class TransitWorld {
       const badge = createSignalBadge(movement);
       head.add(badge.panel);
       const lamps = {};
-      const lampGeometry = new THREE.SphereGeometry(0.245, 18, 12);
+      // A flat, front-facing lens prevents a green/red glow from leaking through
+      // the back or side of a signal head.  The local +Z face is aligned with
+      // each approach by the signal-head group yaw above.
+      const lampGeometry = new THREE.CylinderGeometry(0.245, 0.245, 0.075, 24);
       const lampConfig = [["红灯", 0xff3438, 7.22], ["黄灯", 0xffbd32, 6.38], ["绿灯", 0x27e879, 5.54]];
       for (const [name, color, y] of lampConfig) {
         const material = new THREE.MeshStandardMaterial({
           color: 0x101714, emissive: color, emissiveIntensity: 0.018, roughness: 0.30, toneMapped: false,
         });
         const lamp = mesh(lampGeometry, material);
+        lamp.rotation.x = Math.PI / 2;
         lamp.position.set(0, y, 0.37);
         lamps[name] = lamp;
         head.add(lamp);

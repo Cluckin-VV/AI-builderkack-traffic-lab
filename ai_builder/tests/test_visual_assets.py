@@ -254,6 +254,12 @@ class VisualAssetTests(unittest.TestCase):
         self.assertIn("signalState", app)
         self.assertIn('aria-live="polite"', page)
 
+    def test_signal_lenses_face_their_approach_without_side_glow(self):
+        scene3d = (STATIC_DIR / "scene3d.js").read_text(encoding="utf-8")
+        self.assertIn("new THREE.CylinderGeometry(0.245, 0.245, 0.075, 24)", scene3d)
+        self.assertIn("lamp.rotation.x = Math.PI / 2", scene3d)
+        self.assertNotIn("new THREE.SphereGeometry(0.245, 18, 12)", scene3d)
+
     def test_fog_keeps_the_near_intersection_visible(self):
         source = (STATIC_DIR / "weather-view.js").read_text(encoding="utf-8")
         match = re.search(r"fog:\s*\[0x[0-9a-f]+,\s*(\d+),\s*(\d+)", source)
