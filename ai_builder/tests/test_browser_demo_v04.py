@@ -142,6 +142,7 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertIn("左转 ↰ 放行；直行 ↑ 与右转 ↱ 等待", source)
         self.assertIn("全红清空：所有进口停止", source)
         self.assertIn("全向黄灯：能安全停车的车辆", source)
+        self.assertIn('frame.stage === "yellow" ? "ALL_CAUTION"', source)
 
     def test_fingerprinted_static_asset_url_is_served(self):
         _, page_body = self.get("/")

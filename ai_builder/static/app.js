@@ -243,7 +243,11 @@ sceneRoot.addEventListener("traffic-frame", (event) => {
     : allCaution ? "全向黄灯警示 · 停止线停车 / 路口内清空"
       : allRed ? "全红 · 路口清空"
       : `${phaseLabels[frame.phase] ?? frame.phase} · ${frame.stage === 'yellow' ? '黄灯清场' : frame.stage === 'all_red' ? '全红清空' : '放行'} · ${frame.remainingSeconds}s`;
-  const guidanceKey = station ? "BUS_CORRIDOR" : allCaution ? "ALL_CAUTION" : allRed ? "ALL_RED" : frame.phase;
+  const guidanceKey = station
+    ? "BUS_CORRIDOR"
+    : frame.stage === "yellow" ? "ALL_CAUTION"
+      : frame.stage === "all_red" || allRed ? "ALL_RED"
+        : frame.phase;
   document.querySelector("#signal-explanation").textContent = movementGuidance[guidanceKey]
     ?? "分向灯头：直行 ↑、右转 ↱ 与左转 ↰ 分别显示；等待下一安全相位。";
   document.querySelector("#state-light").textContent = allCaution ? phaseLabels.ALL_CAUTION : allRed ? phaseLabels.ALL_RED : (phaseLabels[frame.phase] ?? frame.phase);
