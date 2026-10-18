@@ -37,15 +37,17 @@ function box(width, height, depth, color, options = {}) {
 function createSignalBadge(movement) {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
-  canvas.height = 96;
+  canvas.height = 160;
   const context = canvas.getContext("2d");
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   const panel = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.65, 0.34),
+    new THREE.PlaneGeometry(1.18, 0.44),
     new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide })
   );
-  panel.position.set(0, 8.35, 0.48);
+  // Keep the movement tag below the head, in the driver-facing sight line.
+  // Above the head it was usually hidden by the mast arm in street view.
+  panel.position.set(0, 4.72, 0.40);
   panel.userData.movement = movement;
   return { canvas, context, texture, panel };
 }
@@ -58,14 +60,17 @@ function updateSignalBadge(signal, value) {
   context.fillStyle = "rgba(7, 17, 15, .94)";
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.strokeStyle = accent;
-  context.lineWidth = 5;
-  context.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
+  context.lineWidth = 7;
+  context.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
   context.fillStyle = "#f2f6ee";
-  context.font = "700 31px ui-monospace, SFMono-Regular, Consolas, monospace";
-  context.textAlign = "center";
+  context.font = "800 65px ui-monospace, SFMono-Regular, Consolas, monospace";
+  context.textAlign = "left";
   context.textBaseline = "middle";
-  const movementLabel = { left: "LEFT ↰", straight: "THRU ↑", right: "RIGHT ↱" }[panel.userData.movement];
-  context.fillText(`${movementLabel}  ${status}`, canvas.width / 2, canvas.height / 2 + 1);
+  const movementLabel = { left: "↰", straight: "↑", right: "↱" }[panel.userData.movement];
+  context.fillText(movementLabel, 36, canvas.height / 2 + 2);
+  context.font = "800 34px ui-monospace, SFMono-Regular, Consolas, monospace";
+  context.textAlign = "right";
+  context.fillText(status, canvas.width - 30, canvas.height / 2 + 2);
   texture.needsUpdate = true;
 }
 

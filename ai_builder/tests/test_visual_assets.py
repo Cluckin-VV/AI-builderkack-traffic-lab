@@ -251,6 +251,8 @@ class VisualAssetTests(unittest.TestCase):
         page = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
         self.assertIn("STOP", scene3d)
         self.assertIn("GO", scene3d)
+        self.assertIn('left: "↰", straight: "↑", right: "↱"', scene3d)
+        self.assertIn("panel.position.set(0, 4.72, 0.40)", scene3d)
         self.assertIn("signalState", app)
         self.assertIn('aria-live="polite"', page)
 
