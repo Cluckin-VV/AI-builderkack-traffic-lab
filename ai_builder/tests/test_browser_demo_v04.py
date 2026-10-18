@@ -42,6 +42,7 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertIn("NEXUS CROSSING", page)
         self.assertIn("让天气下暴雪", page)
         self.assertIn("让天气下陨石", page)
+        self.assertIn('id="signal-explanation"', page)
 
     def test_camera_controls_wait_for_the_webgl_world(self):
         _, page_body = self.get("/")
@@ -132,6 +133,15 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertIn("全向黄灯警示 · 停止线停车 / 路口内清空", source)
         self.assertIn("全红 · 所有车辆停车", source)
         self.assertIn('allCaution ? "CAUTION_ALL"', source)
+
+    def test_signal_guidance_explains_each_independent_movement(self):
+        _, body = self.get("/assets/app.js")
+        source = body.decode("utf-8")
+        self.assertIn("const movementGuidance", source)
+        self.assertIn("直行 ↑ 与右转 ↱ 放行；左转 ↰ 等待保护相位", source)
+        self.assertIn("左转 ↰ 放行；直行 ↑ 与右转 ↱ 等待", source)
+        self.assertIn("全红清空：所有进口停止", source)
+        self.assertIn("全向黄灯：能安全停车的车辆", source)
 
     def test_fingerprinted_static_asset_url_is_served(self):
         _, page_body = self.get("/")

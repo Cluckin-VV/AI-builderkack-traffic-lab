@@ -719,6 +719,23 @@ kbd {
   font: 700 11px/1.2 ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
 
+.signal-explanation {
+  position: absolute;
+  z-index: 3;
+  top: 109px;
+  left: 24px;
+  max-width: min(390px, calc(100% - 48px));
+  margin: 0;
+  padding: 7px 10px;
+  border-left: 2px solid var(--mint);
+  color: rgba(226, 242, 235, 0.88);
+  background: rgba(7, 17, 15, 0.74);
+  backdrop-filter: blur(8px);
+  font: 600 9px/1.45 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+}
+
 .command-status {
   position: absolute;
   z-index: 4;
@@ -1207,6 +1224,12 @@ kbd {
     flex: 1;
     min-width: 0;
     padding: 8px;
+  }
+
+  .signal-explanation {
+    top: 106px;
+    left: 16px;
+    max-width: calc(100% - 32px);
   }
 
   .scene-status {

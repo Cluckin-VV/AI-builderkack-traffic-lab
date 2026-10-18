@@ -66,6 +66,15 @@ const phaseLabels = {
   ALL_RED: "全红 · 路口清空",
   ALL_CAUTION: "全向黄灯 · 停止线停车 / 路口内清空",
 };
+const movementGuidance = {
+  EW_THROUGH: "东西进口：直行 ↑ 与右转 ↱ 放行；左转 ↰ 等待保护相位。",
+  EW_LEFT: "东西进口：左转 ↰ 放行；直行 ↑ 与右转 ↱ 等待。",
+  NS_THROUGH: "南北进口：直行 ↑ 与右转 ↱ 放行；左转 ↰ 等待保护相位。",
+  NS_LEFT: "南北进口：左转 ↰ 放行；直行 ↑ 与右转 ↱ 等待。",
+  ALL_RED: "全红清空：所有进口停止；路口内车辆先完成通过。",
+  ALL_CAUTION: "全向黄灯：能安全停车的车辆在停止线前停车；已越线车辆清空路口。",
+  BUS_CORRIDOR: "站台信号：绿灯放行；红灯停车；公交到站停靠后再进入队列。",
+};
 let lastScene = { buses: 0, bus_count: 0, bus_running: true, traffic_light: "绿灯", weather: "clear", signal_mode: "automatic" };
 let visualPaused = false;
 let eventCount = 0;
@@ -165,6 +174,9 @@ function setSceneState(scene) {
   document.querySelector("#light-state").textContent = station
     ? (light === "红灯" ? "红灯停车" : "绿灯放行")
     : "自动循环 · 准备中";
+  document.querySelector("#signal-explanation").textContent = station
+    ? movementGuidance.BUS_CORRIDOR
+    : "分向灯头：直行 ↑、右转 ↱ 与左转 ↰ 分别显示；自动相位准备中。";
   sceneRoot.dataset.signalState = station
     ? (light === "红灯" ? "STOP_STATION" : "GO_STATION")
     : (light === "红灯" ? "STOP_ALL" : "GO_EW");
@@ -231,6 +243,9 @@ sceneRoot.addEventListener("traffic-frame", (event) => {
     : allCaution ? "全向黄灯警示 · 停止线停车 / 路口内清空"
       : allRed ? "全红 · 路口清空"
       : `${phaseLabels[frame.phase] ?? frame.phase} · ${frame.stage === 'yellow' ? '黄灯清场' : frame.stage === 'all_red' ? '全红清空' : '放行'} · ${frame.remainingSeconds}s`;
+  const guidanceKey = station ? "BUS_CORRIDOR" : allCaution ? "ALL_CAUTION" : allRed ? "ALL_RED" : frame.phase;
+  document.querySelector("#signal-explanation").textContent = movementGuidance[guidanceKey]
+    ?? "分向灯头：直行 ↑、右转 ↱ 与左转 ↰ 分别显示；等待下一安全相位。";
   document.querySelector("#state-light").textContent = allCaution ? phaseLabels.ALL_CAUTION : allRed ? phaseLabels.ALL_RED : (phaseLabels[frame.phase] ?? frame.phase);
   sceneRoot.dataset.signalState = station
     ? (frame.lights.EW === "绿灯" ? "GO_STATION" : "STOP_STATION")
@@ -417,7 +432,9 @@ function showPlanPreview(result) {
   for (const vehicle of vehicles) if (Object.hasOwn(fleet, vehicle.type)) fleet[vehicle.type] += 1;
   const total = vehicles.length || Number(projected.buses ?? projected.bus_count ?? 0);
   const signalMode = projected.signal_mode ?? "automatic";
-  const signalSummary = signalMode === "automatic" ? "自动交通相位" : `手动安全信号 · ${projected.traffic_light ?? "红灯"}`;
+  const signalSummary = signalMode === "automatic"
+    ? "自动四相：东西直右 → 东西左转 → 南北直右 → 南北左转（分向灯头）"
+    : `手动安全信号 · ${projected.traffic_light ?? "红灯"}`;
   planProjection.textContent = `预演结果：${layoutLabels[projected.scene_layout ?? "crossroads"]} · ${total} 辆车（轿车 ${fleet.sedan} / SUV ${fleet.suv} / 公交 ${fleet.bus}）· ${weatherLabels[projected.weather] ?? projected.weather} · ${signalSummary}`;
   planPreview.hidden = false;
   previewBadge.hidden = false;
