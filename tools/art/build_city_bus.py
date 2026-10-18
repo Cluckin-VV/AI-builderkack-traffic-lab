@@ -17,9 +17,9 @@ bpy.context.preferences.filepaths.save_version = 0
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
 
-def material(name, color, metallic=0, roughness=.4, emission=0):
+def material(name, color, metallic=0, roughness=.4, emission=0, opacity=1):
     m = bpy.data.materials.new(name)
-    m.diffuse_color = (*color, 1)
+    m.diffuse_color = (*color, opacity)
     m.use_nodes = True
     n = m.node_tree.nodes.get("Principled BSDF")
     n.inputs["Base Color"].default_value = (*color, 1)
@@ -27,11 +27,16 @@ def material(name, color, metallic=0, roughness=.4, emission=0):
     n.inputs["Roughness"].default_value = roughness
     n.inputs["Emission Color"].default_value = (*color, 1)
     n.inputs["Emission Strength"].default_value = emission
+    n.inputs["Alpha"].default_value = opacity
+    if opacity < 1:
+        m.surface_render_method = 'DITHERED'
     return m
 
 paint = material("Pearl ivory enamel", (.81,.84,.79), .32,.25)
 teal = material("Petrol green enamel", (.018,.22,.23), .4,.24)
-glass = material("Smoked blue glazing", (.028,.075,.10), .58,.14)
+glass = material("Smoked blue glazing", (.028,.075,.10), .58,.14, opacity=.42)
+seat_fabric = material("Charcoal passenger upholstery", (.055,.070,.075), .05,.68)
+seat_trim = material("Seat rail aluminium", (.26,.29,.30), .65,.30)
 rubber = material("Tire rubber", (.012,.017,.019), 0,.84)
 metal = material("Brushed aluminium", (.43,.48,.50), .82,.25)
 black = material("Black trim", (.023,.028,.029), .15,.46)
@@ -55,7 +60,8 @@ def cube(name, loc, size, mat, bevel=0):
     return obj
 
 cube("Low floor body", (0,0,1.15), (9.4,2.48,1.28), paint,.18)
-cube("Continuous window band", (-.04,0,2.18), (9.28,2.42,1.17), glass,.16)
+window_band = cube("Continuous window band", (-.04,0,2.18), (9.28,2.42,1.17), glass,.16)
+window_band["transit_component"] = "glass"
 cube("Roof shell", (-.06,0,2.87), (9.32,2.47,.24), paint,.12)
 cube("Lower green skirt", (0,0,.72), (9.36,2.50,.34), teal,.09)
 cube("Roof battery pod", (-1.2,0,3.09), (3.5,1.75,.28), paint,.1)
@@ -115,9 +121,26 @@ for y in [-.7,-.45,-.2,.05,.3,.55]: cube("Rear grille",(-4.705,y,1.85),(.025,.05
 for x in [3.4,-.8]:
     cube("Passenger door",(x,-1.27,1.71),(1.04,.04,2.04),black,.055)
     for dx in [-.255,.255]:
-        cube("Door glass",(x+dx,-1.295,1.87),(.42,.02,1.44),glass,.025)
+        door_glass=cube("Door glass",(x+dx,-1.295,1.87),(.42,.02,1.44),glass,.025)
+        door_glass["transit_component"]="glass"
         cube("Door yellow safety strip",(x+dx,-1.31,.83),(.42,.015,.045),amber)
     cube("Door threshold",(x,-1.30,.63),(1.08,.06,.06),metal)
+
+# A restrained interior is visible through the real transparent glazing.  It is
+# intentionally generic: the browser scene needs depth cues, not a branded bus.
+cube("Passenger floor", (-.25,0,.88), (7.7,1.92,.10), black,.02)
+for x in [-2.85,-1.65,-.45,.75,1.95]:
+    for side in [-1,1]:
+        y=side*.56
+        base=cube("Passenger seat base",(x,y,1.04),(.52,.46,.18),seat_fabric,.06)
+        base["transit_component"]="seat"
+        back=cube("Passenger seat back",(x-.12,y,1.36),(.18,.46,.58),seat_fabric,.06)
+        back["transit_component"]="seat"
+        rail=cube("Passenger seat rail",(x+.12,y, .94),(.64,.04,.06),seat_trim,.01)
+        rail["transit_component"]="seat"
+driver_base=cube("Driver seat",(3.30,.48,1.18),(.54,.52,.35),seat_fabric,.07)
+driver_base["transit_component"]="seat"
+cube("Driver console",(3.83,.28,1.18),(.34,.72,.28),black,.04)
 
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT/"city-bus-v1.blend"))
 bpy.ops.export_scene.gltf(filepath=str(OUT/"city-bus-v1.glb"),export_format="GLB",export_yup=True)
@@ -154,6 +177,7 @@ for key,batch in batches.items():
     batch["roughness"]=node.inputs["Roughness"].default_value
     batch["metalness"]=node.inputs["Metallic"].default_value
     batch["emission"]=node.inputs["Emission Strength"].default_value
+    batch["opacity"]=mat.diffuse_color[3]
 minimum=[min(point[i] for point in positions_all) for i in range(3)]
 maximum=[max(point[i] for point in positions_all) for i in range(3)]
 payload={"format":"transit-mesh-v1","generator":"Blender "+bpy.app.version_string,"units":"metres",
