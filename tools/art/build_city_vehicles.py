@@ -313,6 +313,21 @@ def build(kind, length, width, color, suv=False):
     cube("Full-width front lower intake", (half - .035, 0, .61), (.045, width * .57, .17), grille, .035)
     cube("Front splitter", (half - .19, 0, .365), (.38, width * .78, .055), secondary, .018)
     cube("Rear diffuser", (-half + .17, 0, .355), (.34, width * .72, .07), secondary, .025)
+    if suv:
+        # A stacked fascia gives the tall SUV nose a readable depth hierarchy:
+        # body-colour upper plane, recessed technical grille, then the lower
+        # intake/splitter. It is original geometry rather than a copied badge or
+        # a texture painted onto a flat front cap.
+        cube("SUV recessed upper grille", (half + .003, 0, .748),
+             (.018, width * .46, .175), grille, .025)
+        for z in (.682, .733, .784):
+            cube("SUV upper grille horizontal fin", (half + .015, 0, z),
+                 (.012, width * .41, .012), secondary, .006)
+        cube("SUV lower intake crossblade", (half + .014, 0, .558),
+             (.014, width * .53, .035), secondary, .010)
+        for side in (-1, 1):
+            cube("SUV outer intake fin", (half + .011, side * width * .365, .56),
+                 (.012, .075, .13), secondary, .010)
     for side in (-1, 1):
         cube("Sculpted side sill", (0, side * (width * .485), .44),
              (2*(wheel_x-tire_r-.06), .10, .17), secondary, .045)
