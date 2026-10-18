@@ -134,13 +134,18 @@ def panel(name, coords, material, component=None):
     return obj
 
 
-def framed_window(name, corners, frame, seal, glass):
-    """Coplanar glazing and inset rings: no solid cabin hiding the windscreen."""
+def framed_window(name, corners, frame, seal, glass, frame_scale=.91, pane_scale=.885):
+    """Coplanar glazing and inset rings: no solid cabin hiding the windscreen.
+
+    ``frame_scale`` and ``pane_scale`` make the clear aperture intentional per
+    vehicle class.  The SUV uses a slimmer surround than the sedan so its taller
+    cabin reads as automotive glazing rather than a dark, toy-like cage.
+    """
     outer = [Vector(v) for v in corners]
     center = sum(outer, Vector()) / 4
     # Separate rings, not a dark quad behind a smaller floating pane.
-    inner = [center + (v-center)*.91 for v in outer]
-    pane = [center + (v-center)*.885 for v in outer]
+    inner = [center + (v-center)*frame_scale for v in outer]
+    pane = [center + (v-center)*pane_scale for v in outer]
     for i in range(4):
         j = (i+1) % 4
         panel(name + " painted frame", [outer[i], outer[j], inner[j], inner[i]], frame)
@@ -247,6 +252,12 @@ def build(kind, length, width, color, suv=False):
     wheel_x = length * .305
     full_width = width
     body_height = 1.12 if suv else 1.00
+    # The larger SUV glasshouse needs a visibly thinner painted surround and
+    # rubber bead.  Two adjacent side panes otherwise stack their borders at
+    # the B-pillar and make the cabin look disproportionately black in a close
+    # browser view.  Sedan proportions retain the original compact treatment.
+    window_frame_scale = .946 if suv else .91
+    window_pane_scale = .930 if suv else .885
 
     sections = [
         (-half, full_width * .40, .39, .73),
@@ -357,13 +368,13 @@ def build(kind, length, width, color, suv=False):
         (cabin_front, cabin_half_width, cabin_bottom),
         (roof_front, roof_half_width, roof_z-.04),
         (roof_front, -roof_half_width, roof_z-.04),
-    ], paint, secondary, glass)
+    ], paint, secondary, glass, window_frame_scale, window_pane_scale)
     framed_window("Rear windscreen", [
         (cabin_rear, cabin_half_width, cabin_bottom),
         (cabin_rear, -cabin_half_width, cabin_bottom),
         (roof_rear, -roof_half_width, roof_z-.04),
         (roof_rear, roof_half_width, roof_z-.04),
-    ], paint, secondary, glass)
+    ], paint, secondary, glass, window_frame_scale, window_pane_scale)
 
     for side in (-1, 1):
         y = side * cabin_half_width
@@ -376,7 +387,8 @@ def build(kind, length, width, color, suv=False):
                                  (roof_rear,roof_y,roof_z-.04), (mid,roof_y,roof_z-.04)]),
         ):
             # Mirroring changes winding; both body frames remain outward-facing.
-            framed_window(name, list(reversed(corners)) if side < 0 else corners, paint, secondary, glass)
+            framed_window(name, list(reversed(corners)) if side < 0 else corners,
+                          paint, secondary, glass, window_frame_scale, window_pane_scale)
         for x in (-.35, .72):
             cube("Flush door handle", (x, side * (width * .50 + .025), .91 if not suv else 1.0),
                  (.20, .045, .045), alloy, .018)
@@ -447,18 +459,29 @@ def build(kind, length, width, color, suv=False):
 
     # Headlamps, rear light bar, grille slats and plate are recognizable but
     # deliberately generic; brake lamps have a runtime-controlled emissive cue.
+    # SUV lamp units use a continuous rectangular signature rather than four
+    # exposed round projectors.  It keeps this original, unbranded vehicle from
+    # reading like a toy while avoiding the identity of any production model.
     for side in (-1, 1):
-        cube("Projector headlamp housing", (half - .02, side * width * .25, .665),
-             (.04, .38, .13), grille, .018)
-        for offset in (-.083, .083):
-            bezel = cylinder("Round projector bezel", (half+.003, side*width*.25+offset, .653),
-                             .045, .014, alloy, vertices=24)
-            bezel.rotation_euler = (0, math.pi/2, 0)
-            lens = cylinder("Recessed projector lens", (half+.011, side*width*.25+offset, .653),
-                            .033, .004, headlamp, "headlamp", vertices=24)
-            lens.rotation_euler = (0, math.pi/2, 0)
-        cube("Upper daytime running light", (half+.004, side*width*.25, .707),
-             (.006, .29, .012), headlamp, .003, component="headlamp")
+        if suv:
+            cube("SUV matrix headlamp housing", (half - .024, side * width * .275, .695),
+                 (.05, .34, .13), grille, .027)
+            cube("SUV matrix projector optic", (half + .007, side * width * .275, .685),
+                 (.008, .215, .052), headlamp, .014, component="headlamp")
+            cube("SUV signature daytime light", (half + .010, side * width * .275, .752),
+                 (.007, .285, .017), headlamp, .006, component="headlamp")
+        else:
+            cube("Projector headlamp housing", (half - .02, side * width * .25, .665),
+                 (.04, .38, .13), grille, .018)
+            for offset in (-.083, .083):
+                bezel = cylinder("Round projector bezel", (half+.003, side*width*.25+offset, .653),
+                                 .045, .014, alloy, vertices=24)
+                bezel.rotation_euler = (0, math.pi/2, 0)
+                lens = cylinder("Recessed projector lens", (half+.011, side*width*.25+offset, .653),
+                                .033, .004, headlamp, "headlamp", vertices=24)
+                lens.rotation_euler = (0, math.pi/2, 0)
+            cube("Upper daytime running light", (half+.004, side*width*.25, .707),
+                 (.006, .29, .012), headlamp, .003, component="headlamp")
         cube("Tail lamp dark surround", (-half + .02, side * width * .27, .665),
              (.04, .34, .13), secondary, .018)
         cube("Adaptive brake light", (-half + .001, side * width * .27, .67),

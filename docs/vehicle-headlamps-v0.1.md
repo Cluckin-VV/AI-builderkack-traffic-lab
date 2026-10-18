@@ -39,3 +39,13 @@ The browser loader already applies alpha glazing consistently at the chosen qual
 Local verification: JS 59/59, Python 311/311. The candidate source fingerprint is `8f8dcfcacd64`.
 
 The candidate was pushed as `72467a9` and deployed to the existing Render free service as `dep-dba1vieq1p3s73a0oc40`. It became live at `2026-10-18T01:25:41Z`. Public `/health` reports the same source fingerprint and commit. A freshly navigated browser also loaded `/assets/app.js?v=8f8dcfcacd64`; its production-loader audit verified transparent glass, cabin depth, four wheel assemblies per vehicle, and no console errors. The public closeup is retained as `output/playwright/public-vehicle-cabin-bus-browser.png`.
+
+## SUV glazing and front-light refinement — 2026-10-18
+
+The production SUV close-up still had an over-heavy black glass surround and four exposed circular lamp elements. The original, generic SUV asset now uses a larger clear glazing aperture: its painted frame scale is `0.946` and its rubber-seal/pane scale is `0.930`, while the sedan retains its existing compact proportions. This avoids changing road dimensions, wheel geometry, traffic routes, vehicle IDs, or the command protocol.
+
+The SUV front lamps are now two original matrix-style rectangular units with a narrow daytime signature, rather than an attempt to reproduce a production vehicle's styling. Existing weather-responsive `headlamp` tagging remains on the lens materials.
+
+Local browser verification used the actual Three.js production loader, not a Blender still. It confirmed three models, four independently spinning wheel assemblies each, transparent passenger glazing with modeled cabin depth, stationary brake calipers, and zero console errors/warnings. The SUV inspection image is `output/playwright/vehicle-cabin-suv-browser.png`; it remains visibly stylized, especially in the broad front volume and simplified panel gaps. This is an exterior readability improvement, not a claim of GT-style photorealism or a universal performance guarantee.
+
+Regression evidence: JavaScript `59/59`; Python `311/311` (`20.990s`). The local runtime fingerprint for these regenerated static assets is `e6f1c884ce7b` before commit metadata changes. Public deployment verification is pending normal GitHub sync and the existing free Render service rollout.
