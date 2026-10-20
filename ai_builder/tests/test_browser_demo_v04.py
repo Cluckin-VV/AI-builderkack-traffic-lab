@@ -51,7 +51,9 @@ class BrowserDemoV04Tests(unittest.TestCase):
         app = app_body.decode("utf-8")
         self.assertIn('id="camera-mode"', page)
         self.assertIn('id="camera-mode" type="button" aria-pressed="false" title="3D 场景加载完成后，可切换斜俯视与街景机位" disabled', page)
-        self.assertIn('const cameraControls = ["#camera-mode", "#corner-camera", "#reset-camera"]', app)
+        self.assertIn('const cameraControls = ["#camera-mode", "#corner-camera", "#traffic-camera", "#reset-camera"]', app)
+        self.assertIn('id="traffic-camera"', page)
+        self.assertIn("setCameraMode(active ? 'traffic' : 'bird')", app)
         self.assertIn("setCameraControlsReady(true);", app)
 
     def test_static_assets_have_explicit_content_types(self):

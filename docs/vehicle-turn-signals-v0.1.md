@@ -38,6 +38,13 @@ game, production-car or brand assets.
 - An isolated production-loader browser smoke test loaded one WebGL canvas with
   the camera enabled and reported zero console errors and zero warnings.
 
+## Observation camera
+
+The workbench also has a **车流近景** button. It moves only the observer camera
+to a fixed roadside pose so a reviewer can inspect actual vehicle lamps, wheels
+and signal heads at useful scale. It neither follows a vehicle nor changes the
+traffic controller, preview state, SceneState or Event Log.
+
 ## Boundaries
 
 This is not a driving simulator or a claim of automotive optical accuracy. The

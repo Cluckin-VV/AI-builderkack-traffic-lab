@@ -24,7 +24,7 @@ const editorForm = document.querySelector("#scene-editor-form");
 const undoButton = document.querySelector("#undo-last");
 const previewBadge = document.querySelector("#preview-badge");
 const resumeAutoSignalButton = document.querySelector("#resume-auto-signal");
-const cameraControls = ["#camera-mode", "#corner-camera", "#reset-camera"].map(selector => document.querySelector(selector));
+const cameraControls = ["#camera-mode", "#corner-camera", "#traffic-camera", "#reset-camera"].map(selector => document.querySelector(selector));
 
 const labels = {
   add_bus: "增加公交车",
@@ -623,6 +623,7 @@ document.querySelector("#camera-mode").addEventListener("click", (event) => {
   event.currentTarget.setAttribute("aria-pressed", String(street));
   event.currentTarget.textContent = street ? "斜俯视" : "街景视角";
   document.querySelector('#corner-camera').setAttribute('aria-pressed','false');
+  document.querySelector('#traffic-camera').setAttribute('aria-pressed','false');
 });
 
 document.querySelector('#corner-camera').addEventListener('click', event => {
@@ -632,6 +633,17 @@ document.querySelector('#corner-camera').addEventListener('click', event => {
   const streetButton=document.querySelector('#camera-mode');
   streetButton.setAttribute('aria-pressed','false');
   streetButton.textContent='街景视角';
+  document.querySelector('#traffic-camera').setAttribute('aria-pressed','false');
+});
+
+document.querySelector('#traffic-camera').addEventListener('click', event => {
+  const active=event.currentTarget.getAttribute('aria-pressed') !== 'true';
+  world?.setCameraMode(active ? 'traffic' : 'bird');
+  event.currentTarget.setAttribute('aria-pressed',String(active));
+  const streetButton=document.querySelector('#camera-mode');
+  streetButton.setAttribute('aria-pressed','false');
+  streetButton.textContent='街景视角';
+  document.querySelector('#corner-camera').setAttribute('aria-pressed','false');
 });
 
 document.querySelector("#reset-camera").addEventListener("click", () => {

@@ -21,6 +21,9 @@ export const CAMERA_PROFILES = Object.freeze({
   bird: Object.freeze({ radius: 92, theta: .82, phi: .59, target: Object.freeze([0, 2.5, 0]) }),
   street: Object.freeze({ radius: 48, theta: .01, phi: 1.525, target: Object.freeze([0, 2.5, 0]) }),
   corner: Object.freeze({ radius: 30.6, theta: -2.24, phi: 1.54, target: Object.freeze([29, 5, 32]) }),
+  // A fixed roadside observation point: it shows actual wheel, lamp and signal
+  // behaviour without following or influencing a simulated vehicle.
+  traffic: Object.freeze({ radius: 27, theta: .12, phi: 1.34, target: Object.freeze([0, 1.7, 0]) }),
 });
 
 export function architecturalLightLevel(weatherLamp, style = 'daylight') {

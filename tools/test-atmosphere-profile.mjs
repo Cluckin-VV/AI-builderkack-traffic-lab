@@ -61,7 +61,7 @@ test('vehicle lamps brighten in rain, fog and blue hour while remaining bounded'
     assert.ok(vehicleHeadlampLevel({fog:input},input)>=.12 && vehicleHeadlampLevel({fog:input},input)<=1.2);
 });
 test('named cameras have immutable finite metre-scale poses', () => {
-  assert.deepEqual(Object.keys(CAMERA_PROFILES),['bird','street','corner']);
+  assert.deepEqual(Object.keys(CAMERA_PROFILES),['bird','street','corner','traffic']);
   for(const profile of Object.values(CAMERA_PROFILES)) {
     assert.ok(Object.isFrozen(profile) && Object.isFrozen(profile.target));
     assert.ok(profile.radius >= 25 && profile.radius < 100);
@@ -69,6 +69,8 @@ test('named cameras have immutable finite metre-scale poses', () => {
     assert.ok(profile.target.every(Number.isFinite));
   }
   assert.ok(CAMERA_PROFILES.street.radius > 40);
+  assert.ok(CAMERA_PROFILES.traffic.radius < CAMERA_PROFILES.street.radius);
+  assert.deepEqual(CAMERA_PROFILES.traffic.target,[0,1.7,0]);
 });
 
 test('lighting changes start at the current appearance and converge without a jump', () => {
