@@ -6,6 +6,7 @@ const { createAtmosphere, createCity, createBusStopDistrict, batchStaticCity, lo
 const { TrafficController, MAX_VEHICLES } = await import(new URL("./traffic-controller.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { WeatherView } = await import(new URL("./weather-view.js" + new URL(import.meta.url).search, import.meta.url).href);
 const { qualityProfile, CAMERA_PROFILES } = await import(new URL("./atmosphere-profile.mjs" + new URL(import.meta.url).search, import.meta.url).href);
+const { turnSignalState } = await import(new URL("./vehicle-signals.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const layoutResponse = await fetch("/assets/scene-layouts.json" + new URL(import.meta.url).search);
 if (!layoutResponse.ok) throw new Error(`Scene layout manifest: HTTP ${layoutResponse.status}`);
 const layoutDefinitions = await layoutResponse.json();
@@ -91,6 +92,7 @@ export class TransitWorld {
     this.signalGroups = { EW: [], NS: [] };
     this.signalHeads = [];
     this.lastTrafficEvent = 0;
+    this.presentationTime = 0;
     this.activeLayout = 'crossroads';
     this.layoutDefinitions = layoutDefinitions;
     this.cameraMode = 'bird';
@@ -241,7 +243,7 @@ export class TransitWorld {
     group.scale.setScalar(0.01);
     group.userData.targetScale = 1;
     this.scene.add(group);
-    const vehicle={id:descriptor.id,type:descriptor.type,group,wheelGroups:[],wheelPivots:new Map(),brakeLights:[],headLights:[],lastS:null,
+    const vehicle={id:descriptor.id,type:descriptor.type,group,wheelGroups:[],wheelPivots:new Map(),brakeLights:[],headLights:[],turnSignals:{left:[],right:[]},lastS:null,
       model:null,bodyDynamics:{wheelSpin:0,steeringAngle:0,pitch:0,roll:0,previousSpeed:0,previousYaw:null}};
     if(this.vehicleTemplates?.[descriptor.type])this.attachVehicleTemplate(vehicle);
     return vehicle;
@@ -253,7 +255,7 @@ export class TransitWorld {
       if(Array.isArray(child.material))child.material.forEach(material=>material.dispose());else child.material?.dispose();
     }
     const model=this.vehicleTemplates[vehicle.type].clone(true);
-    vehicle.wheelGroups=[];vehicle.wheelPivots=new Map();vehicle.brakeLights=[];vehicle.headLights=[];vehicle.model=model;
+    vehicle.wheelGroups=[];vehicle.wheelPivots=new Map();vehicle.brakeLights=[];vehicle.headLights=[];vehicle.turnSignals={left:[],right:[]};vehicle.model=model;
     model.traverse(child=>{
       if(child.userData.vehicleWheelId)vehicle.wheelPivots.set(child.userData.vehicleWheelId,child);
       if(child.userData.vehicleWheelSpin){child.userData.wheelRadius=model.userData.wheelRadius;vehicle.wheelGroups.push(child);}
@@ -262,6 +264,10 @@ export class TransitWorld {
       }
       if(child.userData.component==='headlamp'){
         child.material=child.material.clone();child.material.emissiveIntensity=.12;vehicle.headLights.push(child);
+      }
+      if(child.userData.component==='turn_signal_left'||child.userData.component==='turn_signal_right'){
+        child.material=child.material.clone();child.material.emissiveIntensity=.035;
+        vehicle.turnSignals[child.userData.component === 'turn_signal_left' ? 'left' : 'right'].push(child);
       }
     });
     vehicle.groundOffset=model.userData.groundOffset;
@@ -272,7 +278,7 @@ export class TransitWorld {
     const requested = descriptors.slice(0, MAX_VEHICLES);
     const wanted = new Map(requested.map(item => [item.id,item]));
     for (const vehicle of [...this.vehicles]) if (!wanted.has(vehicle.id)) {
-      for(const lamp of [...vehicle.brakeLights,...vehicle.headLights])lamp.material.dispose();
+      for(const lamp of [...vehicle.brakeLights,...vehicle.headLights,...vehicle.turnSignals.left,...vehicle.turnSignals.right])lamp.material.dispose();
       this.scene.remove(vehicle.group); this.vehicles.splice(this.vehicles.indexOf(vehicle),1);
     }
     const existing = new Set(this.vehicles.map(vehicle => vehicle.id));
@@ -320,6 +326,7 @@ export class TransitWorld {
   }
 
   applyTrafficSnapshot(snapshot, deltaSeconds=0) {
+    if(deltaSeconds>0)this.presentationTime+=deltaSeconds;
     for (const signal of this.signalHeads) {
       const stage = snapshot.signalGroups?.[signal.groupKey] ?? "red";
       this.setSignalHead(signal, stage === "green" ? "绿灯" : stage === "yellow" ? "黄灯" : "红灯");
@@ -339,6 +346,9 @@ export class TransitWorld {
       if(wheelSpin)for(const wheel of rendered.wheelGroups)wheel.rotation.z+=wheelSpin;
       const braking=speedDelta<-.08||BRAKING_REASONS.has(vehicle.reason);
       for(const lamp of rendered.brakeLights)lamp.material.emissiveIntensity=braking?2.1:.12;
+      const indicators=turnSignalState({movement:vehicle.movement,pathProgress:vehicle.pathProgress,elapsedSeconds:this.presentationTime});
+      for(const lamp of rendered.turnSignals.left)lamp.material.emissiveIntensity=indicators.left?2.35:.035;
+      for(const lamp of rendered.turnSignals.right)lamp.material.emissiveIntensity=indicators.right?2.35:.035;
       const steeringTarget=THREE.MathUtils.clamp((yawDelta/dt)*.55,-.42,.42);
       const smoothing=1-Math.exp(-dt*10);
       dynamics.steeringAngle=THREE.MathUtils.lerp(dynamics.steeringAngle,steeringTarget,smoothing);

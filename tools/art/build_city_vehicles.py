@@ -419,8 +419,12 @@ def build(kind, length, width, color, suv=False):
              (.009, .095, .11), secondary, .008)
         cube("Rear-facing mirror glass", (mirror_x-.142, side * mirror_y, mirror_z+.025),
              (.003, .080, .092), mirror_glass, .001, component="mirror_glass")
+        # The side repeaters and bumper lamps are exported by turn side.  The
+        # browser binds them to the deterministic left/right route intent, not
+        # to a free-running decorative animation.
+        turn_side = "left" if side < 0 else "right"
         cube("Mirror indicator", (mirror_x+.05, side * (mirror_y+.074), mirror_z+.025),
-             (.13, .012, .028), amber, .01)
+             (.13, .012, .028), amber, .01, component="turn_signal_" + turn_side)
         if suv:
             cube("Matte SUV rocker cladding", (0, side * (width * .507), .43),
                  (2*(wheel_x-tire_r-.06), .035, .22), secondary, .055)
@@ -526,10 +530,13 @@ def build(kind, length, width, color, suv=False):
                  (.006, .29, .012), headlamp, .003, component="headlamp")
         cube("Tail lamp dark surround", (-half + .02, side * width * .27, .665),
              (.04, .34, .13), secondary, .018)
+        turn_side = "left" if side < 0 else "right"
         cube("Adaptive brake light", (-half + .001, side * width * .27, .67),
              (.006, .28, .075), brake_lamp, .003, component="brake_lamp")
+        cube("Rear turn indicator", (-half + .009, side * width * .27, .775),
+             (.007, .105, .027), amber, .004, component="turn_signal_" + turn_side)
         cube("Front fender marker", (wheel_x + .35, side * (width * .505), .78),
-             (.18, .024, .06), amber, .02)
+             (.18, .024, .06), amber, .02, component="turn_signal_" + turn_side)
     for y in (-.43, -.28, -.14, 0, .14, .28, .43):
         cube("Front grille vertical", (half - .05, y, .66), (.035, .025, .13), alloy, .008)
     cube("Unbranded front plate", (half - .03, 0, .47), (.025, .40, .105), plate, .012)

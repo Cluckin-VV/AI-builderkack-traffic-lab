@@ -63,6 +63,7 @@ class BrowserDemoV04Tests(unittest.TestCase):
             "/assets/weather-view.js": "text/javascript",
             "/assets/atmosphere-profile.mjs": "text/javascript",
             "/assets/road-markings.mjs": "text/javascript",
+            "/assets/vehicle-signals.mjs": "text/javascript",
         }
         for path, content_type in expected.items():
             with self.subTest(path=path):

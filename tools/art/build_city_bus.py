@@ -101,7 +101,12 @@ for side in [-1,1]:
     # Projecting mirrors and marker lights.
     cube("Mirror arm",(4.05,side*1.30,2.42),(.12,.24,.10),black,.025)
     cube("Mirror",(4.10,side*1.46,2.29),(.22,.14,.42),black,.045)
-    for x in [-4,-1.4,1.5,4]: cube("Side marker",(x,side*1.266,.85),(.15,.025,.06),amber,.01)
+    for x in [-4,-1.4,1.5,4]:
+        marker = cube("Side marker",(x,side*1.266,.85),(.15,.025,.06),amber,.01)
+        # Reuse the existing front/rear side repeaters rather than adding more
+        # meshes: this preserves the initial browser payload budget.
+        if x in (-4, 4):
+            marker["transit_component"] = "turn_signal_" + ("left" if side < 0 else "right")
 
 # Front windows, LED destination panel, wipers and lower lamps.
 cube("Destination panel",(4.635,0,2.58),(.13,1.98,.3),black,.035)

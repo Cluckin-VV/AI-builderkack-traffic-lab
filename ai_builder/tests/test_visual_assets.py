@@ -93,6 +93,8 @@ class VisualAssetTests(unittest.TestCase):
                 components = {batch.get("component") for batch in model["batches"].values()}
                 self.assertIn("wheel", components)
                 self.assertIn("brake_lamp", components)
+                self.assertIn("turn_signal_left", components)
+                self.assertIn("turn_signal_right", components)
                 self.assertGreater(model["dimensions"]["length"], 4)
                 self.assertLess(model["dimensions"]["length"], 10)
 
@@ -134,6 +136,7 @@ class VisualAssetTests(unittest.TestCase):
         self.assertIn("steeringAngle", scene3d)
         self.assertIn("bodyDynamics", scene3d)
         self.assertIn("brakeLamps", urban_world)
+        self.assertIn("turnSignals", urban_world)
         self.assertIn("wheelPivots", urban_world)
 
     def test_passenger_windscreens_are_not_buried_under_opaque_cabin(self):

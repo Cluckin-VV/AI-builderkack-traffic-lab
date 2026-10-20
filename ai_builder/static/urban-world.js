@@ -548,6 +548,7 @@ async function loadVehicleAsset(type) {
   const wheelPivots=new Map();
   const brakeLamps=[];
   const headLamps=[];
+  const turnSignals={left:[],right:[]};
   for(const [name,b] of Object.entries(asset.batches)) {
     const geo=new THREE.BufferGeometry();
     geo.setAttribute("position",new THREE.Float32BufferAttribute(b.positions,3));
@@ -568,6 +569,8 @@ async function loadVehicleAsset(type) {
     if(tinted){m.castShadow=false;m.receiveShadow=false;}
     if(m.userData.component === "brake_lamp") brakeLamps.push(m);
     if(m.userData.component === "headlamp") headLamps.push(m);
+    if(m.userData.component === "turn_signal_left") turnSignals.left.push(m);
+    if(m.userData.component === "turn_signal_right") turnSignals.right.push(m);
     if(b.wheel_id) {
       let pivot=wheelPivots.get(b.wheel_id);
       if(!pivot) {
@@ -586,6 +589,7 @@ async function loadVehicleAsset(type) {
   group.userData.wheelPivots=wheelPivots;
   group.userData.brakeLamps=brakeLamps;
   group.userData.headLamps=headLamps;
+  group.userData.turnSignals=turnSignals;
   return group;
 }
 
