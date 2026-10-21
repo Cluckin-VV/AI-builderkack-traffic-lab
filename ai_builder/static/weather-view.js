@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
-const { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, architecturalLightLevel, vehicleHeadlampLevel } = await import(new URL(
+const { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, architecturalLightLevel, vehicleHeadlampLevel, vehicleFinishProfile } = await import(new URL(
   './atmosphere-profile.mjs' + new URL(import.meta.url).search, import.meta.url).href);
 
 // Presentation only: reads weather configuration and animates pixels; never writes SceneState.
@@ -166,8 +166,17 @@ export class WeatherView {
     const headlampLevel=vehicleHeadlampLevel(weights,blue);
     for(const vehicle of this.world.vehicles??[])
       for(const lens of vehicle.headLights??[])lens.material.emissiveIntensity=headlampLevel;
+    for(const vehicle of this.world.vehicles??[])
+      for(const panel of vehicle.bodyMaterials??[]) {
+        const finish=vehicleFinishProfile(panel.base,wetness);
+        panel.material.roughness=finish.roughness;
+        panel.material.clearcoat=finish.clearcoat;
+        panel.material.clearcoatRoughness=finish.clearcoatRoughness;
+        panel.material.envMapIntensity=finish.envMapIntensity;
+      }
     const firstLens=this.world.vehicles?.find(vehicle=>vehicle.headLights?.length)?.headLights[0];
     this.world.container.dataset.vehicleHeadlampIntensity=firstLens?.material.emissiveIntensity.toFixed(2) ?? 'none';
+    this.world.container.dataset.vehicleWetness=wetness.toFixed(3);
     this.world.container.dataset.atmosphereTransition=weights[this.weather]>.998?'settled':'blending';
     this.world.container.dataset.lightingTransition=this.lighting.settled?'settled':'blending';
     const environmentKey=this.weather+':'+this.lightStyle;

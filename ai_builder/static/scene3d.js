@@ -269,7 +269,7 @@ export class TransitWorld {
     group.scale.setScalar(0.01);
     group.userData.targetScale = 1;
     this.scene.add(group);
-    const vehicle={id:descriptor.id,type:descriptor.type,group,wheelGroups:[],wheelPivots:new Map(),brakeLights:[],headLights:[],turnSignals:{left:[],right:[]},spray:null,lastS:null,
+    const vehicle={id:descriptor.id,type:descriptor.type,group,wheelGroups:[],wheelPivots:new Map(),brakeLights:[],headLights:[],turnSignals:{left:[],right:[]},bodyMaterials:[],spray:null,lastS:null,
       model:null,bodyDynamics:{wheelSpin:0,steeringAngle:0,pitch:0,roll:0,previousSpeed:0,previousYaw:null}};
     if(this.vehicleTemplates?.[descriptor.type])this.attachVehicleTemplate(vehicle);
     vehicle.spray=createVehicleSpray(descriptor.type);vehicle.group.add(vehicle.spray);
@@ -284,12 +284,23 @@ export class TransitWorld {
       if(Array.isArray(child.material))child.material.forEach(material=>material.dispose());else child.material?.dispose();
     }
     const model=this.vehicleTemplates[vehicle.type].clone(true);
-    vehicle.wheelGroups=[];vehicle.wheelPivots=new Map();vehicle.brakeLights=[];vehicle.headLights=[];vehicle.turnSignals={left:[],right:[]};vehicle.model=model;
+    vehicle.wheelGroups=[];vehicle.wheelPivots=new Map();vehicle.brakeLights=[];vehicle.headLights=[];vehicle.turnSignals={left:[],right:[]};vehicle.bodyMaterials=[];vehicle.model=model;
     model.traverse(child=>{
       if(child.userData.vehicleWheelId)vehicle.wheelPivots.set(child.userData.vehicleWheelId,child);
       if(child.userData.vehicleWheelSpin){child.userData.wheelRadius=model.userData.wheelRadius;vehicle.wheelGroups.push(child);}
       if(child.userData.component==='brake_lamp'){
         child.material=child.material.clone();child.material.emissiveIntensity=.12;vehicle.brakeLights.push(child);
+      }
+      // Templates share source materials.  Give only painted body panels a
+      // per-instance material so rain can alter a vehicle finish without
+      // mutating another vehicle, lenses, glass, or signal colours.
+      if(child.userData.component==='body' && child.material){
+        child.material=child.material.clone();
+        vehicle.bodyMaterials.push({
+          material:child.material,
+          base:{roughness:child.material.roughness,clearcoat:child.material.clearcoat,
+            clearcoatRoughness:child.material.clearcoatRoughness,envMapIntensity:child.material.envMapIntensity},
+        });
       }
       if(child.userData.component==='headlamp'){
         child.material=child.material.clone();child.material.emissiveIntensity=.12;vehicle.headLights.push(child);
@@ -309,6 +320,7 @@ export class TransitWorld {
     const wanted = new Map(requested.map(item => [item.id,item]));
     for (const vehicle of [...this.vehicles]) if (!wanted.has(vehicle.id)) {
       for(const lamp of [...vehicle.brakeLights,...vehicle.headLights,...vehicle.turnSignals.left,...vehicle.turnSignals.right])lamp.material.dispose();
+      for(const panel of vehicle.bodyMaterials??[])panel.material.dispose();
       vehicle.spray?.geometry?.dispose();vehicle.spray?.material?.dispose();
       this.scene.remove(vehicle.group); this.vehicles.splice(this.vehicles.indexOf(vehicle),1);
     }

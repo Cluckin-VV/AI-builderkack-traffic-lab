@@ -52,6 +52,28 @@ export function vehicleHeadlampLevel(weatherWeights, blueWeight) {
   return Math.min(1.2, .12 + 1.08 * need);
 }
 
+// A deliberately small, bounded clear-coat adjustment for painted vehicle
+// panels.  It models the broad visual cue of a wet finish; it is not a water
+// simulation and never changes the vehicle or traffic domain state.
+export function vehicleFinishProfile(base = {}, wetness = 0) {
+  const number = (value, fallback, minimum, maximum) => {
+    const candidate = Number.isFinite(value) ? value : fallback;
+    return Math.max(minimum, Math.min(maximum, candidate));
+  };
+  const wet = number(wetness, 0, 0, 1);
+  const roughness = number(base.roughness, .42, .05, 1);
+  const clearcoat = number(base.clearcoat, 0, 0, 1);
+  const clearcoatRoughness = number(base.clearcoatRoughness, .2, .03, 1);
+  const envMapIntensity = number(base.envMapIntensity, 1, 0, 3);
+  return Object.freeze({
+    wetness: wet,
+    roughness: Math.max(.08, roughness * (1 - .42 * wet)),
+    clearcoat: Math.min(.8, clearcoat + (.32 * wet)),
+    clearcoatRoughness: Math.max(.06, clearcoatRoughness * (1 - .48 * wet)),
+    envMapIntensity: Math.min(1.35, envMapIntensity + (.22 * wet)),
+  });
+}
+
 // Presentation history: rain wets quickly, but pavement dries gradually after it stops.
 // This never changes the selected weather or the domain snapshot.
 export class SurfaceWetness {

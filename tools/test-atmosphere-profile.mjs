@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, architecturalLightLevel, vehicleHeadlampLevel } from '../ai_builder/static/atmosphere-profile.mjs';
+import { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, architecturalLightLevel, vehicleHeadlampLevel, vehicleFinishProfile } from '../ai_builder/static/atmosphere-profile.mjs';
 
 test('weather changes blend rather than jumping on confirmation', () => {
   const blend = new AtmosphereTransition();
@@ -59,6 +59,27 @@ test('vehicle lamps brighten in rain, fog and blue hour while remaining bounded'
   assert.equal(vehicleHeadlampLevel({clear:1},1),1.2);
   for(const input of [NaN,Infinity,-4,8])
     assert.ok(vehicleHeadlampLevel({fog:input},input)>=.12 && vehicleHeadlampLevel({fog:input},input)<=1.2);
+});
+test('painted vehicle finish gets a bounded wet sheen without changing its base colour', () => {
+  const base={roughness:.42,clearcoat:.18,clearcoatRoughness:.22,envMapIntensity:1};
+  const dry=vehicleFinishProfile(base,0);
+  const wet=vehicleFinishProfile(base,1);
+  assert.deepEqual(dry,{wetness:0,roughness:.42,clearcoat:.18,clearcoatRoughness:.22,envMapIntensity:1});
+  assert.ok(wet.roughness<dry.roughness);
+  assert.ok(wet.clearcoat>dry.clearcoat);
+  assert.ok(wet.clearcoatRoughness<dry.clearcoatRoughness);
+  assert.ok(wet.envMapIntensity>dry.envMapIntensity);
+  assert.ok(Object.values(wet).every(Number.isFinite));
+  assert.ok(Object.isFrozen(wet));
+});
+test('vehicle finish clamps malformed materials and weather without a whiteout', () => {
+  const finish=vehicleFinishProfile({roughness:Infinity,clearcoat:-4,clearcoatRoughness:NaN,envMapIntensity:99},Infinity);
+  assert.deepEqual(finish,{wetness:0,roughness:.42,clearcoat:0,clearcoatRoughness:.2,envMapIntensity:1.35});
+  const wet=vehicleFinishProfile({roughness:8,clearcoat:8,clearcoatRoughness:-3,envMapIntensity:-4},8);
+  assert.ok(wet.roughness>=.08 && wet.roughness<=1);
+  assert.ok(wet.clearcoat<=.8 && wet.clearcoat>=0);
+  assert.ok(wet.clearcoatRoughness>=.06 && wet.clearcoatRoughness<=1);
+  assert.ok(wet.envMapIntensity>=0 && wet.envMapIntensity<=1.35);
 });
 test('named cameras have immutable finite metre-scale poses', () => {
   assert.deepEqual(Object.keys(CAMERA_PROFILES),['bird','street','corner','traffic']);
