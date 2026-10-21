@@ -210,7 +210,9 @@
         <button type="button" data-command="切换雨天">雨天</button>
         <button type="button" data-command="下雪">飘雪</button>
         <button type="button" data-command="切换雾天">薄雾</button>
+        <button id="compare-weather" type="button" class="weather-compare">对比 60s</button>
       </div>
+      <p id="weather-comparison" class="weather-comparison" hidden aria-live="polite"></p>
 
       <ol id="pipeline" class="pipeline" aria-label="动作验证流水线">
         <li data-stage="candidate"><span>01</span><div><b>Candidate</b><small>ModelAdapter</small></div><i></i></li>

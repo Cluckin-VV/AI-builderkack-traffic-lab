@@ -19,7 +19,11 @@ For example, confirmed rain shows a 22 km/h cap, 3.5 m target following gap and 
 
 During preview the overlay may visualise the projected controller frame, but the large preview badge remains visible and server-owned `SceneState.weather` remains unchanged. Cancelling returns the overlay to the real frame. Confirming the plan is the only route that changes weather, after the normal Schema and Semantic checks.
 
-The values are intentionally instantaneous. They are not presented as an average journey speed, a safety score, a traffic optimisation result or a real-world prediction.
+The values are intentionally instantaneous. The comparison's “average controlled stop” is a sample average of vehicles already stopped by the local controller, not a trip wait time. Neither display is presented as an average journey speed, a safety score, a traffic optimisation result or a real-world prediction.
+
+## Fixed-seed weather comparison
+
+The **Compare 60s** control starts four separate browser-local controllers from the same scene seed and signal plan, then reports 60 seconds of fixed-step observation for clear, rain, snow and fog. It neither advances the live controller nor sends an HTTP command. This makes the weather trade-off demonstrable without presenting a visual effect as a real-world forecast.
 
 ## Verification
 

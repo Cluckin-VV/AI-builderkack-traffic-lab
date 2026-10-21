@@ -44,6 +44,7 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertIn("让天气下陨石", page)
         self.assertIn('id="signal-explanation"', page)
         self.assertIn('id="traffic-experiment"', page)
+        self.assertIn('id="compare-weather"', page)
 
     def test_camera_controls_wait_for_the_webgl_world(self):
         _, page_body = self.get("/")
@@ -158,6 +159,16 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertIn("frame.trafficMetrics", app)
         self.assertIn("trafficExperimentMetrics", controller)
         self.assertIn("server-owned analytics record", controller)
+
+    def test_weather_comparison_remains_browser_local_and_read_only(self):
+        _, app_body = self.get("/assets/app.js")
+        _, controller_body = self.get("/assets/traffic-controller.mjs")
+        app = app_body.decode("utf-8")
+        controller = controller_body.decode("utf-8")
+        self.assertIn("compareWeatherScenarios", app)
+        self.assertIn('compareWeatherButton.addEventListener("click", showWeatherComparison)', app)
+        self.assertIn("creates separate controllers", controller)
+        self.assertNotIn("fetch(", controller)
 
     def test_fingerprinted_static_asset_url_is_served(self):
         _, page_body = self.get("/")

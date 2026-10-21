@@ -1,5 +1,6 @@
 const buildFingerprint = document.querySelector('meta[name="build-fingerprint"]')?.content ?? "dev";
 const { buildEditorCommand } = await import(`/assets/scene-editor.mjs?v=${encodeURIComponent(buildFingerprint)}`);
+const { compareWeatherScenarios } = await import(`/assets/traffic-controller.mjs?v=${encodeURIComponent(buildFingerprint)}`);
 
 const form = document.querySelector("#command-form");
 const promptInput = document.querySelector("#prompt");
@@ -24,6 +25,7 @@ const editorForm = document.querySelector("#scene-editor-form");
 const undoButton = document.querySelector("#undo-last");
 const previewBadge = document.querySelector("#preview-badge");
 const resumeAutoSignalButton = document.querySelector("#resume-auto-signal");
+const compareWeatherButton = document.querySelector("#compare-weather");
 const cameraControls = ["#camera-mode", "#corner-camera", "#traffic-camera", "#reset-camera"].map(selector => document.querySelector(selector));
 
 const labels = {
@@ -194,6 +196,22 @@ function editorTarget() {
     traffic_light: document.querySelector("#editor-light").value,
   };
 }
+
+function showWeatherComparison() {
+  try {
+    const results = compareWeatherScenarios(lastScene, 60);
+    const labels = { clear: "晴", rain: "雨", snow: "雪", fog: "雾" };
+    const summary = results.map(result => `${labels[result.weather]} ${result.averageMovingKph} km/h · 平均受控停车 ${result.averageQueuedVehicles}`).join("　");
+    const output = document.querySelector("#weather-comparison");
+    output.hidden = false;
+    output.textContent = `同一车辆种子与信号计划 · 60s 离线演示：${summary}。仅用于场景比较，不是现实预测。`;
+    setStatus("ready", "已完成同一初始条件下的四种天气对比；真实 SceneState 未改变");
+  } catch (error) {
+    setStatus("rejected", `情景对比不可用：${error.message}`);
+  }
+}
+
+compareWeatherButton.addEventListener("click", showWeatherComparison);
 
 editorForm.addEventListener("submit", (event) => {
   event.preventDefault();

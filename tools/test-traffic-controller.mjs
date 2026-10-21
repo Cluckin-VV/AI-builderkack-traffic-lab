@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { MAX_VEHICLES, TrafficController, STOP_CENTER, trafficExperimentMetrics, weatherSafetyPolicy } from '../ai_builder/static/traffic-controller.mjs';
+import { MAX_VEHICLES, TrafficController, STOP_CENTER, compareWeatherScenarios, trafficExperimentMetrics, weatherSafetyPolicy } from '../ai_builder/static/traffic-controller.mjs';
 const layouts = JSON.parse(readFileSync(new URL('../ai_builder/scene_layouts.json', import.meta.url)));
 
 const config = {
@@ -120,6 +120,20 @@ test('instantaneous experiment metrics expose controller-local weather outcomes 
   assert.ok(state.trafficMetrics.movingSpeedKph >= 0);
   assert.deepEqual(trafficExperimentMetrics(state.vehicles, state.weatherPolicy), state.trafficMetrics);
   assert.throws(() => { state.trafficMetrics.speedCapKph = 1; }, TypeError);
+});
+test('fixed-seed weather comparison is deterministic and cannot advance the live controller', () => {
+  const live = create();
+  const before = live.snapshot();
+  const state = { ...config, layout_data: layouts.crossroads };
+  const first = compareWeatherScenarios(state, 60);
+  const second = compareWeatherScenarios(state, 60);
+  assert.deepEqual(first, second);
+  assert.deepEqual(live.snapshot(), before);
+  assert.deepEqual(first.map(result => result.weather), ['clear', 'rain', 'snow', 'fog']);
+  assert.ok(first.every(result => result.durationSeconds === 60 && Number.isFinite(result.averageMovingKph) && Number.isFinite(result.averageQueuedVehicles)));
+  const [clear, rain, snow, fog] = first;
+  assert.ok(rain.speedLimit < clear.speedLimit && snow.speedLimit < rain.speedLimit && fog.followingGap > clear.followingGap);
+  assert.throws(() => compareWeatherScenarios(state, 0), RangeError);
 });
 test('fixed steps produce deterministic replay', () => {
   const a = create(), b = create();

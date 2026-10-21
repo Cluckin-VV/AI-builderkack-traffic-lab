@@ -753,6 +753,21 @@ kbd {
   pointer-events: none;
 }
 
+.weather-comparison {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(242, 188, 55, 0.34);
+  border-radius: var(--radius-sm);
+  color: rgba(242, 235, 211, 0.9);
+  background: rgba(23, 28, 17, 0.62);
+  font: 600 10px/1.5 ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+.weather-shortcuts .weather-compare {
+  border-color: rgba(242, 188, 55, 0.6);
+  color: #f4ca62;
+}
+
 .command-status {
   position: absolute;
   z-index: 4;

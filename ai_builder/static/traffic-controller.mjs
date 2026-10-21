@@ -102,6 +102,32 @@ export function trafficExperimentMetrics(vehicles, policy) {
   });
 }
 
+// Deterministic, off-screen comparison from the same initial scene seed. It
+// creates separate controllers and therefore never advances the live world.
+export function compareWeatherScenarios(sceneState, seconds = 60) {
+  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 300) throw new RangeError('Comparison duration must be between 0 and 300 seconds');
+  const steps = Math.round(seconds / STEP);
+  return Object.freeze(['clear', 'rain', 'snow', 'fog'].map(weather => {
+    const controller = new TrafficController();
+    controller.configure({ ...sceneState, weather });
+    let speedTotal = 0;
+    let queueTotal = 0;
+    for (let index = 0; index < steps; index += 1) {
+      const frame = controller.advance(STEP);
+      speedTotal += frame.trafficMetrics.movingSpeedKph;
+      queueTotal += frame.trafficMetrics.queuedVehicles;
+    }
+    const finalFrame = controller.snapshot();
+    return Object.freeze({
+      weather,
+      durationSeconds: seconds,
+      averageMovingKph: Math.round(speedTotal / steps * 10) / 10,
+      averageQueuedVehicles: Math.round(queueTotal / steps * 10) / 10,
+      ...finalFrame.weatherPolicy,
+    });
+  }));
+}
+
 function laneOffset(movement, config) {
   const lane = movement === 'left' ? 'left' : movement === 'right' ? 'right' : 'straight';
   return config.lane_offsets[lane];
