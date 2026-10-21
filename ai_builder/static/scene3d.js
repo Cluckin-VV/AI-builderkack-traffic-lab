@@ -7,7 +7,7 @@ const { TrafficController, MAX_VEHICLES } = await import(new URL("./traffic-cont
 const { WeatherView } = await import(new URL("./weather-view.js" + new URL(import.meta.url).search, import.meta.url).href);
 const { qualityProfile, CAMERA_PROFILES } = await import(new URL("./atmosphere-profile.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { turnSignalState } = await import(new URL("./vehicle-signals.mjs" + new URL(import.meta.url).search, import.meta.url).href);
-const { rainSprayState } = await import(new URL("./vehicle-weather-effects.mjs" + new URL(import.meta.url).search, import.meta.url).href);
+const { rainSprayState, wiperSweepState } = await import(new URL("./vehicle-weather-effects.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const layoutResponse = await fetch("/assets/scene-layouts.json" + new URL(import.meta.url).search);
 if (!layoutResponse.ok) throw new Error(`Scene layout manifest: HTTP ${layoutResponse.status}`);
 const layoutDefinitions = await layoutResponse.json();
@@ -269,7 +269,7 @@ export class TransitWorld {
     group.scale.setScalar(0.01);
     group.userData.targetScale = 1;
     this.scene.add(group);
-    const vehicle={id:descriptor.id,type:descriptor.type,group,wheelGroups:[],wheelPivots:new Map(),brakeLights:[],headLights:[],turnSignals:{left:[],right:[]},bodyMaterials:[],spray:null,lastS:null,
+    const vehicle={id:descriptor.id,type:descriptor.type,group,wheelGroups:[],wheelPivots:new Map(),wiperPivots:new Map(),brakeLights:[],headLights:[],turnSignals:{left:[],right:[]},bodyMaterials:[],spray:null,lastS:null,
       model:null,bodyDynamics:{wheelSpin:0,steeringAngle:0,pitch:0,roll:0,previousSpeed:0,previousYaw:null}};
     if(this.vehicleTemplates?.[descriptor.type])this.attachVehicleTemplate(vehicle);
     vehicle.spray=createVehicleSpray(descriptor.type);vehicle.group.add(vehicle.spray);
@@ -284,9 +284,10 @@ export class TransitWorld {
       if(Array.isArray(child.material))child.material.forEach(material=>material.dispose());else child.material?.dispose();
     }
     const model=this.vehicleTemplates[vehicle.type].clone(true);
-    vehicle.wheelGroups=[];vehicle.wheelPivots=new Map();vehicle.brakeLights=[];vehicle.headLights=[];vehicle.turnSignals={left:[],right:[]};vehicle.bodyMaterials=[];vehicle.model=model;
+    vehicle.wheelGroups=[];vehicle.wheelPivots=new Map();vehicle.wiperPivots=new Map();vehicle.brakeLights=[];vehicle.headLights=[];vehicle.turnSignals={left:[],right:[]};vehicle.bodyMaterials=[];vehicle.model=model;
     model.traverse(child=>{
       if(child.userData.vehicleWheelId)vehicle.wheelPivots.set(child.userData.vehicleWheelId,child);
+      if(child.userData.vehicleWiperId)vehicle.wiperPivots.set(child.userData.vehicleWiperId,child);
       if(child.userData.vehicleWheelSpin){child.userData.wheelRadius=model.userData.wheelRadius;vehicle.wheelGroups.push(child);}
       if(child.userData.component==='brake_lamp'){
         child.material=child.material.clone();child.material.emissiveIntensity=.12;vehicle.brakeLights.push(child);
@@ -399,6 +400,8 @@ export class TransitWorld {
         rendered.spray.scale.setScalar(sprayState.scale);
         rendered.spray.geometry.setDrawRange(0,sprayState.particles);
       }
+      const wiperState=wiperSweepState({rainWeight:this.weatherView?.rainIntensity,elapsedSeconds:this.presentationTime});
+      for(const pivot of rendered.wiperPivots.values())pivot.rotation.y=wiperState.angle;
       const steeringTarget=THREE.MathUtils.clamp((yawDelta/dt)*.55,-.42,.42);
       const smoothing=1-Math.exp(-dt*10);
       dynamics.steeringAngle=THREE.MathUtils.lerp(dynamics.steeringAngle,steeringTarget,smoothing);

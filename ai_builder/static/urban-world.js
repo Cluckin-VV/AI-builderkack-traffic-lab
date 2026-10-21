@@ -546,6 +546,7 @@ async function loadVehicleAsset(type) {
   const lowestWheel=Object.values(asset.wheel_centers ?? {}).reduce((minimum,center)=>Math.min(minimum,center[1]-group.userData.wheelRadius),Infinity);
   group.userData.groundOffset=.22-(Number.isFinite(lowestWheel)?lowestWheel:(asset.bounds?.min?.[1] ?? 0));
   const wheelPivots=new Map();
+  const wiperPivots=new Map();
   const brakeLamps=[];
   const headLamps=[];
   const turnSignals={left:[],right:[]};
@@ -584,9 +585,18 @@ async function loadVehicleAsset(type) {
       // Calipers steer with the knuckle, but do not spin with the tire/disc.
       if(b.component === "brake_caliper")pivot.add(m);
       else pivot.children.find(child=>child.userData.vehicleWheelSpin).add(m);
+    } else if(b.wiper_id) {
+      let pivot=wiperPivots.get(b.wiper_id);
+      if(!pivot) {
+        pivot=new THREE.Group();pivot.name=`wiper-pivot-${b.wiper_id}`;pivot.userData.vehicleWiperId=b.wiper_id;
+        const center=asset.wiper_centers?.[b.wiper_id] ?? [0,0,0];pivot.position.set(...center);
+        wiperPivots.set(b.wiper_id,pivot);group.add(pivot);
+      }
+      pivot.add(m);
     } else group.add(m);
   }
   group.userData.wheelPivots=wheelPivots;
+  group.userData.wiperPivots=wiperPivots;
   group.userData.brakeLamps=brakeLamps;
   group.userData.headLamps=headLamps;
   group.userData.turnSignals=turnSignals;

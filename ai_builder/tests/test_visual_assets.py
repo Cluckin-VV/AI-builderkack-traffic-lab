@@ -90,11 +90,14 @@ class VisualAssetTests(unittest.TestCase):
                 self.assertEqual(model["vehicle_type"], vehicle_type)
                 self.assertIn("original", model["design"])
                 self.assertEqual(len(model["wheel_centers"]), 4)
+                self.assertEqual(len(model.get("wiper_centers", {})), 2)
                 components = {batch.get("component") for batch in model["batches"].values()}
                 self.assertIn("wheel", components)
                 self.assertIn("brake_lamp", components)
                 self.assertIn("turn_signal_left", components)
                 self.assertIn("turn_signal_right", components)
+                self.assertIn("windscreen_wiper", components)
+                self.assertIn("two_front_wiper_blades", model.get("wiper_detail", []))
                 self.assertGreater(model["dimensions"]["length"], 4)
                 self.assertLess(model["dimensions"]["length"], 10)
 
@@ -138,6 +141,8 @@ class VisualAssetTests(unittest.TestCase):
         self.assertIn("brakeLamps", urban_world)
         self.assertIn("turnSignals", urban_world)
         self.assertIn("rainSprayState", scene3d)
+        self.assertIn("wiperSweepState", scene3d)
+        self.assertIn("wiperPivots", urban_world)
         self.assertIn("rain-wheel-spray", scene3d)
         self.assertIn("wheelPivots", urban_world)
 

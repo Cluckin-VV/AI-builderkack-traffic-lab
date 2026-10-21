@@ -109,12 +109,20 @@ for side in [-1,1]:
             marker["transit_component"] = "turn_signal_" + ("left" if side < 0 else "right")
 
 # Front windows, LED destination panel, wipers and lower lamps.
+wiper_centers={
+    "front_driver":[4.667,2.0,.56],
+    "front_passenger":[4.667,2.0,-.56],
+}
 cube("Destination panel",(4.635,0,2.58),(.13,1.98,.3),black,.035)
 for y in [-.80,-.66,-.52,-.38,-.24,-.10,.04,.18,.32,.46,.60,.74]:
     cube("Front display LED",(4.71,y,2.58),(.025,.065,.13),amber)
-for y in [-.56,.56]:
-    w=cube("Windscreen wiper",(4.667,y,2.0),(.025,.035,.53),black,.008)
-    w.rotation_euler.x=.32
+for side_name, side in [("driver", -1), ("passenger", 1)]:
+    wiper_id = "front_" + side_name
+    pivot=(4.667,side*.56,2.0)
+    # The pivot is explicit metadata above; a single un-bevelled blade keeps
+    # the initial browser asset budget intact while still sweeping around it.
+    blade=cube("Windscreen wiper blade "+wiper_id,(pivot[0],pivot[1]+side*.30,pivot[2]),(.025,.035,.53),black,0)
+    blade["transit_component"]="windscreen_wiper"; blade["transit_wiper_id"]=wiper_id
     cube("Headlight surround",(4.71,y*1.45,1.13),(.08,.38,.22),black,.045)
     cube("Headlight",(4.757,y*1.45,1.14),(.027,.26,.105),white,.025)["transit_component"]="headlamp"
     cube("Rear light",(-4.70,y*1.65,1.44),(.035,.13,.45),red,.028)["transit_component"]="brake_lamp"
@@ -161,17 +169,20 @@ for obj in bpy.context.scene.objects:
     matrix=obj.matrix_world; normal_matrix=matrix.to_3x3().inverted().transposed()
     component=obj.get("transit_component","body")
     wheel_id=obj.get("transit_wheel_id")
+    wiper_id=obj.get("transit_wiper_id")
     if wheel_id and wheel_id not in wheel_centers:
         wheel_centers[wheel_id]=[round(obj.location.x,5),round(obj.location.z,5),round(-obj.location.y,5)]
-    center=wheel_centers.get(wheel_id,[0,0,0]) if wheel_id else [0,0,0]
+    if wiper_id and wiper_id not in wiper_centers:
+        wiper_centers[wiper_id]=[round(obj.location.x,5),round(obj.location.z,5),round(-obj.location.y,5)]
+    center=wheel_centers.get(wheel_id,[0,0,0]) if wheel_id else wiper_centers.get(wiper_id,[0,0,0])
     for tri in geo.loop_triangles:
         mat=obj.data.materials[tri.material_index]
-        key="|".join((mat.name,component,wheel_id or ""))
-        batch=batches.setdefault(key,{"positions":[],"normals":[],"component":component,"wheel_id":wheel_id})
+        key="|".join((mat.name,component,wheel_id or "",wiper_id or ""))
+        batch=batches.setdefault(key,{"positions":[],"normals":[],"component":component,"wheel_id":wheel_id,"wiper_id":wiper_id})
         for loop_index, vi in zip(tri.loops, tri.vertices):
             v=matrix @ geo.vertices[vi].co
             n=normal_matrix @ geo.corner_normals[loop_index].vector; n.normalize()
-            point=(v.x-center[0],v.z-center[1],-v.y-center[2]) if wheel_id else (v.x,v.z,-v.y)
+            point=(v.x-center[0],v.z-center[1],-v.y-center[2]) if (wheel_id or wiper_id) else (v.x,v.z,-v.y)
             batch["positions"].extend(round(a,5) for a in point)
             batch["normals"].extend(round(a,5) for a in (n.x,n.z,-n.y))
             positions_all.append((v.x,v.z,-v.y))
@@ -190,6 +201,8 @@ payload={"format":"transit-mesh-v1","generator":"Blender "+bpy.app.version_strin
          "overall_dimensions":{"length":round(maximum[0]-minimum[0],3),"height":round(maximum[1]-minimum[1],3),"width":round(maximum[2]-minimum[2],3)},
          "body_dimensions":{"length":9.4,"height":round(maximum[1]-minimum[1],3),"width":2.48},
          "dimensions":{"length":round(maximum[0]-minimum[0],3),"height":round(maximum[1]-minimum[1],3),"width":round(maximum[2]-minimum[2],3)},
-         "wheel_centers":wheel_centers,"bounds":{"min":[round(x,4) for x in minimum],"max":[round(x,4) for x in maximum]},"batches":batches}
+         "wheel_centers":wheel_centers,"wiper_centers":wiper_centers,
+         "wiper_detail":["two_front_wiper_blades","rain_presentation_pivots"],
+         "bounds":{"min":[round(x,4) for x in minimum],"max":[round(x,4) for x in maximum]},"batches":batches}
 (OUT/"city-bus-v1.json").write_text(json.dumps(payload,separators=(",",":")),encoding="utf-8")
 print("BUS_EXPORT",json.dumps({"batches":len(batches),"triangles":sum(len(b["positions"])//9 for b in batches.values()),"bytes":(OUT/"city-bus-v1.json").stat().st_size}))

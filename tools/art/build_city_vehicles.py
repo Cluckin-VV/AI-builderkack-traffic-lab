@@ -39,7 +39,7 @@ def mat(name, color, metal=0.0, rough=.38, emission=0.0, coat=0.0, coat_rough=.2
     return value
 
 
-def cube(name, loc, size, material, bevel=.04, component=None, wheel_id=None, rotation=None):
+def cube(name, loc, size, material, bevel=.04, component=None, wheel_id=None, wiper_id=None, rotation=None):
     bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
     obj = bpy.context.object
     obj.name = name
@@ -52,6 +52,8 @@ def cube(name, loc, size, material, bevel=.04, component=None, wheel_id=None, ro
         obj["transit_component"] = component
     if wheel_id:
         obj["transit_wheel_id"] = wheel_id
+    if wiper_id:
+        obj["transit_wiper_id"] = wiper_id
     if bevel:
         mod = obj.modifiers.new("Automotive edge radius", "BEVEL")
         mod.width = bevel
@@ -384,6 +386,22 @@ def build(kind, length, width, color, suv=False):
         (roof_front, roof_half_width, roof_z-.04),
         (roof_front, -roof_half_width, roof_z-.04),
     ], paint, secondary, glass, window_frame_scale, window_pane_scale)
+    # Two small, fully authored wiper assemblies sit at the base of the
+    # windscreen.  Their named pivots are exported separately so the browser
+    # can sweep them in rain without inventing temporary WebGL geometry.
+    for side_name, side in (("driver", -1), ("passenger", 1)):
+        wiper_id = "front_" + side_name
+        pivot = (cabin_front - .085, side * width * .18, cabin_bottom + .035)
+        cube("Wiper pivot cap " + wiper_id, pivot, (.038, .060, .040), secondary, .010,
+             component="windscreen_wiper", wiper_id=wiper_id)
+        cube("Wiper arm " + wiper_id,
+             (pivot[0] - .008, pivot[1] + side * .145, pivot[2] + .010),
+             (.024, .285, .025), secondary, .008,
+             component="windscreen_wiper", wiper_id=wiper_id)
+        cube("Wiper blade " + wiper_id,
+             (pivot[0] - .014, pivot[1] + side * .345, pivot[2] + .018),
+             (.018, .405, .028), secondary, .007,
+             component="windscreen_wiper", wiper_id=wiper_id)
     framed_window("Rear windscreen", [
         (cabin_rear, cabin_half_width, cabin_bottom),
         (cabin_rear, -cabin_half_width, cabin_bottom),
@@ -557,6 +575,7 @@ def build(kind, length, width, color, suv=False):
     wheel_centers = {axle + "_" + side_name: [round(x,5), wheel_z, round(-side*width*.49,5)]
                      for axle, x in (("front",wheel_x),("rear",-wheel_x))
                      for side_name, side in (("left",-1),("right",1))}
+    wiper_centers = {}
     positions_all = []
     deps = bpy.context.evaluated_depsgraph_get()
     for obj in bpy.context.scene.objects:
@@ -564,25 +583,28 @@ def build(kind, length, width, color, suv=False):
             continue
         component = obj.get("transit_component", "body")
         wheel_id = obj.get("transit_wheel_id")
+        wiper_id = obj.get("transit_wiper_id")
         if wheel_id and wheel_id not in wheel_centers:
             wheel_centers[wheel_id] = [round(obj.location.x, 5), round(obj.location.z, 5), round(-obj.location.y, 5)]
+        if wiper_id and wiper_id not in wiper_centers:
+            wiper_centers[wiper_id] = [round(obj.location.x, 5), round(obj.location.z, 5), round(-obj.location.y, 5)]
         evaluated = obj.evaluated_get(deps)
         geo = evaluated.to_mesh()
         geo.calc_loop_triangles()
         matrix = obj.matrix_world
         normal_matrix = matrix.to_3x3().inverted().transposed()
-        key = "|".join((obj.data.materials[0].name, component, wheel_id or ""))
-        batch = batches.setdefault(key, {"positions": [], "normals": [], "component": component, "wheel_id": wheel_id})
-        center = wheel_centers.get(wheel_id, [0, 0, 0]) if wheel_id else [0, 0, 0]
+        key = "|".join((obj.data.materials[0].name, component, wheel_id or "", wiper_id or ""))
+        batch = batches.setdefault(key, {"positions": [], "normals": [], "component": component, "wheel_id": wheel_id, "wiper_id": wiper_id})
+        center = wheel_centers.get(wheel_id, [0, 0, 0]) if wheel_id else wiper_centers.get(wiper_id, [0, 0, 0])
         for tri in geo.loop_triangles:
             material = obj.data.materials[tri.material_index]
-            batch_key = "|".join((material.name, component, wheel_id or ""))
-            batch = batches.setdefault(batch_key, {"positions": [], "normals": [], "component": component, "wheel_id": wheel_id})
+            batch_key = "|".join((material.name, component, wheel_id or "", wiper_id or ""))
+            batch = batches.setdefault(batch_key, {"positions": [], "normals": [], "component": component, "wheel_id": wheel_id, "wiper_id": wiper_id})
             for loop_index, vi in zip(tri.loops, tri.vertices):
                 v = matrix @ geo.vertices[vi].co
                 n = normal_matrix @ geo.corner_normals[loop_index].vector
                 n.normalize()
-                point = (v.x - center[0], v.z - center[1], -v.y - center[2]) if wheel_id else (v.x, v.z, -v.y)
+                point = (v.x - center[0], v.z - center[1], -v.y - center[2]) if (wheel_id or wiper_id) else (v.x, v.z, -v.y)
                 batch["positions"].extend(round(a, 5) for a in point)
                 batch["normals"].extend(round(a, 5) for a in (n.x, n.z, -n.y))
                 positions_all.append((v.x, v.z, -v.y))
@@ -609,6 +631,7 @@ def build(kind, length, width, color, suv=False):
         "units": "metres", "vehicle_type": kind,
         "design": "original game-ready GT sport sedan" if not suv else "original game-ready urban SUV",
         "wheel_detail": ["open_alloy", "five_lug_nuts", "alternating_tread_blocks", "fixed_caliper"],
+        "wiper_detail": ["two_front_wiper_blades", "rain_presentation_pivots"],
         "wheel_radius": tire_r,
         "body_dimensions": {"length": length, "height": round(maximum[1] - minimum[1], 3), "width": width},
         "overall_dimensions": {"length": round(maximum[0] - minimum[0], 3),
@@ -619,6 +642,7 @@ def build(kind, length, width, color, suv=False):
                        "width": round(maximum[2] - minimum[2], 3)},
         "bounds": {"min": [round(x, 4) for x in minimum], "max": [round(x, 4) for x in maximum]},
         "wheel_centers": wheel_centers,
+        "wiper_centers": wiper_centers,
         "batches": batches,
     }
     filepath.with_suffix(".json").write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")

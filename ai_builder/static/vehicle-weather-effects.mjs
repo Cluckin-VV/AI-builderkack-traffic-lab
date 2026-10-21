@@ -15,3 +15,13 @@ export function rainSprayState({ rainWeight = 0, speed = 0, quality = 'balanced'
     particles: quality === 'high' ? 20 : quality === 'low' ? 8 : 14,
   });
 }
+
+// Presentation only: a steady, bounded front-windscreen sweep.  It consumes
+// the renderer's rain weight, never vehicle speed, routes or domain state.
+export function wiperSweepState({ rainWeight = 0, elapsedSeconds = 0 } = {}) {
+  const rain = clamp(rainWeight);
+  const time = Number.isFinite(elapsedSeconds) ? elapsedSeconds : 0;
+  const active = rain > .025;
+  const angle = active ? Math.sin(time * 3.2) * .42 * rain : 0;
+  return Object.freeze({active, angle: Math.max(-.42, Math.min(.42, angle))});
+}
