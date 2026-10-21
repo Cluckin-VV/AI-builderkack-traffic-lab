@@ -1,6 +1,7 @@
 const buildFingerprint = document.querySelector('meta[name="build-fingerprint"]')?.content ?? "dev";
 const { buildEditorCommand } = await import(`/assets/scene-editor.mjs?v=${encodeURIComponent(buildFingerprint)}`);
 const { compareWeatherScenarios } = await import(`/assets/traffic-controller.mjs?v=${encodeURIComponent(buildFingerprint)}`);
+const { observeVehicles, vehicleObserverSummary } = await import(`/assets/vehicle-observer.mjs?v=${encodeURIComponent(buildFingerprint)}`);
 
 const form = document.querySelector("#command-form");
 const promptInput = document.querySelector("#prompt");
@@ -25,6 +26,9 @@ const editorForm = document.querySelector("#scene-editor-form");
 const undoButton = document.querySelector("#undo-last");
 const previewBadge = document.querySelector("#preview-badge");
 const resumeAutoSignalButton = document.querySelector("#resume-auto-signal");
+const vehicleObserverCount = document.querySelector("#vehicle-observer-count");
+const vehicleObserverSummaryElement = document.querySelector("#vehicle-observer-summary");
+const vehicleObserverList = document.querySelector("#vehicle-observer-list");
 const compareWeatherButton = document.querySelector("#compare-weather");
 const cameraControls = ["#camera-mode", "#corner-camera", "#traffic-camera", "#reset-camera"].map(selector => document.querySelector(selector));
 
@@ -231,6 +235,7 @@ editorForm.addEventListener("submit", (event) => {
 
 sceneRoot.addEventListener("traffic-frame", (event) => {
   const frame = event.detail;
+  renderVehicleObserver(frame);
   const counts = { moving: 0, red_light: 0, yellow_light: 0, manual_stop: 0, following: 0, braking: 0, station_dwell: 0 };
   for (const vehicle of frame.vehicles) {
     const reason = vehicle.reason ?? "moving";
@@ -287,6 +292,32 @@ sceneRoot.addEventListener("traffic-frame", (event) => {
   sceneRoot.dataset.vehicleReasons = JSON.stringify(counts);
   sceneRoot.dataset.trafficMetrics = JSON.stringify(metrics ?? {});
 });
+
+function renderVehicleObserver(frame) {
+  const observed = observeVehicles(frame);
+  vehicleObserverCount.textContent = `LIVE · ${Array.isArray(frame?.vehicles) ? frame.vehicles.length : 0}`;
+  vehicleObserverSummaryElement.textContent = vehicleObserverSummary(frame);
+  vehicleObserverList.replaceChildren();
+  if (!observed.length) {
+    const empty = document.createElement('li');
+    empty.className = 'vehicle-observer-empty';
+    empty.textContent = '等待车辆进入场景';
+    vehicleObserverList.append(empty);
+    return;
+  }
+  for (const vehicle of observed) {
+    const row = document.createElement('li');
+    row.className = `vehicle-observer-row is-${vehicle.reason}`;
+    const title = document.createElement('b');
+    title.textContent = `${vehicle.typeLabel} · ${vehicle.displayId}`;
+    const route = document.createElement('span');
+    route.textContent = vehicle.movementLabel;
+    const status = document.createElement('small');
+    status.textContent = `${vehicle.reasonLabel} · ${vehicle.speedKph} km/h`;
+    row.append(title, route, status);
+    vehicleObserverList.append(row);
+  }
+}
 
 sceneRoot.addEventListener('render-frame', ({detail}) => {
   const output=document.querySelector('#render-performance');

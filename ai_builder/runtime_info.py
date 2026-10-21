@@ -33,6 +33,7 @@ def source_fingerprint() -> str:
         "static/weather-view.js",
         "static/atmosphere-profile.mjs",
         "static/road-markings.mjs",
+        "static/vehicle-observer.mjs",
         "static/vendor/Reflector.js",
         "static/models/city-bus-v1.json",
         "static/models/city-sedan-v1.json",

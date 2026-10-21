@@ -919,6 +919,7 @@ kbd {
 .result-badge.rejected { color: var(--danger); border-color: rgba(255, 107, 95, 0.35); }
 
 .state-panel,
+.vehicle-observer-panel,
 .action-panel,
 .history-panel {
   padding: 20px 0;
@@ -965,6 +966,39 @@ kbd {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.vehicle-observer-summary {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.vehicle-observer-list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  list-style: none;
+}
+
+.vehicle-observer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: baseline;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.vehicle-observer-row:last-child { border-bottom: 0; }
+.vehicle-observer-row b { min-width: 0; color: var(--text); font: 700 10px/1.3 ui-monospace, "SFMono-Regular", Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vehicle-observer-row > span { color: var(--faint); font: 600 9px/1.3 ui-monospace, "SFMono-Regular", Consolas, monospace; }
+.vehicle-observer-row small { grid-column: 1 / -1; color: var(--muted); font-size: 9px; line-height: 1.35; }
+.vehicle-observer-row.is-red_light small, .vehicle-observer-row.is-yellow_light small, .vehicle-observer-row.is-braking_for_stop small { color: #f2c469; }
+.vehicle-observer-row.is-following small { color: #8cc8e3; }
+.vehicle-observer-empty { padding: 12px 10px; color: var(--muted); font-size: 10px; }
 
 .empty-action {
   min-height: 92px;
