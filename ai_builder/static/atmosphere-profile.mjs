@@ -23,7 +23,9 @@ export const CAMERA_PROFILES = Object.freeze({
   corner: Object.freeze({ radius: 30.6, theta: -2.24, phi: 1.54, target: Object.freeze([29, 5, 32]) }),
   // A fixed roadside observation point: it shows actual wheel, lamp and signal
   // behaviour without following or influencing a simulated vehicle.
-  traffic: Object.freeze({ radius: 27, theta: .12, phi: 1.34, target: Object.freeze([0, 1.7, 0]) }),
+  // Offset from the signal masts so this is an actual roadside vehicle view,
+  // rather than a close-up of a foreground signal head.
+  traffic: Object.freeze({ radius: 34, theta: -.86, phi: 1.32, target: Object.freeze([0, 1.8, -2]) }),
 });
 
 export function architecturalLightLevel(weatherLamp, style = 'daylight') {

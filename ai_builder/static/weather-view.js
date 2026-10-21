@@ -13,6 +13,7 @@ export class WeatherView {
     this.time = 0;
     this.lightStyle = 'daylight';
     this.environmentWeather = 'clear';
+    this.rainIntensity = 0;
     this.blendedColor = new THREE.Color();
     this.rain = this.makeParticles(1500, 0xb8d4e3, 0.13, 0.66, "rain");
     this.snow = this.makeParticles(1500, 0xf8fcff, 0.58, 0.94, "snow");
@@ -95,6 +96,7 @@ export class WeatherView {
     const view=this.transition.advance(seconds);
     const lighting=this.lighting.advance(seconds);
     const weights=this.transition.weights;
+    this.rainIntensity = weights.rain;
     const wetness=this.surfaceWetness.advance(seconds,view.wet)*(1-weights.snow*.9);
     this.world.container.dataset.surfaceWetness=wetness.toFixed(3);
     this.rain.visible = weights.rain>.001;

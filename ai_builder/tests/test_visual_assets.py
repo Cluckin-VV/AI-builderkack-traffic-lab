@@ -137,6 +137,8 @@ class VisualAssetTests(unittest.TestCase):
         self.assertIn("bodyDynamics", scene3d)
         self.assertIn("brakeLamps", urban_world)
         self.assertIn("turnSignals", urban_world)
+        self.assertIn("rainSprayState", scene3d)
+        self.assertIn("rain-wheel-spray", scene3d)
         self.assertIn("wheelPivots", urban_world)
 
     def test_passenger_windscreens_are_not_buried_under_opaque_cabin(self):

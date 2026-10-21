@@ -7,6 +7,7 @@ const { TrafficController, MAX_VEHICLES } = await import(new URL("./traffic-cont
 const { WeatherView } = await import(new URL("./weather-view.js" + new URL(import.meta.url).search, import.meta.url).href);
 const { qualityProfile, CAMERA_PROFILES } = await import(new URL("./atmosphere-profile.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { turnSignalState } = await import(new URL("./vehicle-signals.mjs" + new URL(import.meta.url).search, import.meta.url).href);
+const { rainSprayState } = await import(new URL("./vehicle-weather-effects.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const layoutResponse = await fetch("/assets/scene-layouts.json" + new URL(import.meta.url).search);
 if (!layoutResponse.ok) throw new Error(`Scene layout manifest: HTTP ${layoutResponse.status}`);
 const layoutDefinitions = await layoutResponse.json();
@@ -73,6 +74,31 @@ function updateSignalBadge(signal, value) {
   context.textAlign = "right";
   context.fillText(status, canvas.width - 30, canvas.height / 2 + 2);
   texture.needsUpdate = true;
+}
+
+function createVehicleSpray(type) {
+  const count = 20;
+  let seed = type === 'bus' ? 321 : type === 'suv' ? 197 : 113;
+  const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+  const positions = new Float32Array(count * 3);
+  const longitudinal = type === 'bus' ? 1.75 : type === 'suv' ? 1.08 : .96;
+  const lateral = type === 'bus' ? 1.0 : type === 'suv' ? .78 : .72;
+  for (let index = 0; index < count; index += 1) {
+    positions[index * 3] = -longitudinal - random() * longitudinal * .76;
+    positions[index * 3 + 1] = .10 + random() * .50;
+    positions[index * 3 + 2] = (random() - .5) * lateral * 2;
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({
+    color: 0xb8d2de, size: .44, transparent: true, opacity: 0,
+    alphaTest: .08, depthWrite: false, sizeAttenuation: true,
+  });
+  const spray = new THREE.Points(geometry, material);
+  spray.name = 'rain-wheel-spray';
+  spray.visible = false;
+  spray.userData.presentationOnly = true;
+  return spray;
 }
 
 export class TransitWorld {
@@ -243,13 +269,16 @@ export class TransitWorld {
     group.scale.setScalar(0.01);
     group.userData.targetScale = 1;
     this.scene.add(group);
-    const vehicle={id:descriptor.id,type:descriptor.type,group,wheelGroups:[],wheelPivots:new Map(),brakeLights:[],headLights:[],turnSignals:{left:[],right:[]},lastS:null,
+    const vehicle={id:descriptor.id,type:descriptor.type,group,wheelGroups:[],wheelPivots:new Map(),brakeLights:[],headLights:[],turnSignals:{left:[],right:[]},spray:null,lastS:null,
       model:null,bodyDynamics:{wheelSpin:0,steeringAngle:0,pitch:0,roll:0,previousSpeed:0,previousYaw:null}};
     if(this.vehicleTemplates?.[descriptor.type])this.attachVehicleTemplate(vehicle);
+    vehicle.spray=createVehicleSpray(descriptor.type);vehicle.group.add(vehicle.spray);
     return vehicle;
   }
 
   attachVehicleTemplate(vehicle) {
+    const spray=vehicle.spray;
+    if(spray) vehicle.group.remove(spray);
     for(const child of [...vehicle.group.children]) {
       vehicle.group.remove(child);child.geometry?.dispose();
       if(Array.isArray(child.material))child.material.forEach(material=>material.dispose());else child.material?.dispose();
@@ -272,6 +301,7 @@ export class TransitWorld {
     });
     vehicle.groundOffset=model.userData.groundOffset;
     vehicle.group.add(model);
+    if(spray) vehicle.group.add(spray);
   }
 
   setVehicles(descriptors) {
@@ -279,6 +309,7 @@ export class TransitWorld {
     const wanted = new Map(requested.map(item => [item.id,item]));
     for (const vehicle of [...this.vehicles]) if (!wanted.has(vehicle.id)) {
       for(const lamp of [...vehicle.brakeLights,...vehicle.headLights,...vehicle.turnSignals.left,...vehicle.turnSignals.right])lamp.material.dispose();
+      vehicle.spray?.geometry?.dispose();vehicle.spray?.material?.dispose();
       this.scene.remove(vehicle.group); this.vehicles.splice(this.vehicles.indexOf(vehicle),1);
     }
     const existing = new Set(this.vehicles.map(vehicle => vehicle.id));
@@ -349,6 +380,13 @@ export class TransitWorld {
       const indicators=turnSignalState({movement:vehicle.movement,pathProgress:vehicle.pathProgress,elapsedSeconds:this.presentationTime});
       for(const lamp of rendered.turnSignals.left)lamp.material.emissiveIntensity=indicators.left?2.35:.035;
       for(const lamp of rendered.turnSignals.right)lamp.material.emissiveIntensity=indicators.right?2.35:.035;
+      const sprayState=rainSprayState({rainWeight:this.weatherView?.rainIntensity,speed:vehicle.currentSpeed,quality:this.quality});
+      if(rendered.spray) {
+        rendered.spray.visible=sprayState.visible;
+        rendered.spray.material.opacity=sprayState.opacity;
+        rendered.spray.scale.setScalar(sprayState.scale);
+        rendered.spray.geometry.setDrawRange(0,sprayState.particles);
+      }
       const steeringTarget=THREE.MathUtils.clamp((yawDelta/dt)*.55,-.42,.42);
       const smoothing=1-Math.exp(-dt*10);
       dynamics.steeringAngle=THREE.MathUtils.lerp(dynamics.steeringAngle,steeringTarget,smoothing);
