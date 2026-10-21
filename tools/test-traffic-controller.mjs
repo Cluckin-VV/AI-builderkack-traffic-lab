@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { MAX_VEHICLES, TrafficController, STOP_CENTER } from '../ai_builder/static/traffic-controller.mjs';
+import { MAX_VEHICLES, TrafficController, STOP_CENTER, weatherSafetyPolicy } from '../ai_builder/static/traffic-controller.mjs';
 const layouts = JSON.parse(readFileSync(new URL('../ai_builder/scene_layouts.json', import.meta.url)));
 
 const config = {
@@ -82,6 +82,30 @@ test('never releases conflicting directions together', () => {
 test('snow lowers progress without changing requested state', () => {
   const sunny = create(), snow = create({ weather: 'snow' });
   assert.ok(tick(snow, 5).vehicles[0].s < tick(sunny, 5).vehicles[0].s);
+});
+test('rain, snow and fog derive slower, wider safety policies without new protocol state', () => {
+  const junction = layouts.crossroads.junction;
+  const clear = weatherSafetyPolicy(junction, 'clear');
+  const rain = weatherSafetyPolicy(junction, 'rain');
+  const snow = weatherSafetyPolicy(junction, 'snow');
+  const fog = weatherSafetyPolicy(junction, 'fog');
+  assert.equal(clear.followingGap, 2.5);
+  assert.ok(rain.speedLimit < clear.speedLimit && rain.followingGap > clear.followingGap);
+  assert.ok(snow.speedLimit < rain.speedLimit && snow.stoppingBuffer > rain.stoppingBuffer);
+  assert.ok(fog.speedLimit < clear.speedLimit && fog.followingGap > clear.followingGap);
+  assert.deepEqual(weatherSafetyPolicy(junction, 'unsupported'), clear);
+});
+test('rain keeps a larger actual same-lane queue gap than the clear safety margin', () => {
+  const vehicles = [
+    { id: 'lead', type: 'sedan', approach: 'W', movement: 'straight' },
+    { id: 'follow', type: 'suv', approach: 'W', movement: 'straight' },
+  ];
+  const rainy = create({ weather: 'rain', vehicles });
+  const state = tick(rainy, 4);
+  const lane = state.vehicles.sort((a, b) => b.s - a.s);
+  const bumperGap = lane[0].s - lane[1].s - (lane[0].length + lane[1].length) / 2;
+  assert.ok(bumperGap >= state.weatherPolicy.followingGap - 1e-8);
+  assert.ok(state.weatherPolicy.followingGap > layouts.crossroads.junction.following_gap.normal);
 });
 test('fixed steps produce deterministic replay', () => {
   const a = create(), b = create();

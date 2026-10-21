@@ -248,8 +248,15 @@ sceneRoot.addEventListener("traffic-frame", (event) => {
     : frame.stage === "yellow" ? "ALL_CAUTION"
       : frame.stage === "all_red" || allRed ? "ALL_RED"
         : frame.phase;
-  document.querySelector("#signal-explanation").textContent = movementGuidance[guidanceKey]
+  const signalGuidance = movementGuidance[guidanceKey]
     ?? "分向灯头：直行 ↑、右转 ↱ 与左转 ↰ 分别显示；等待下一安全相位。";
+  const weatherGuidance = {
+    rain: `雨天策略：限速 ${Math.round((frame.weatherPolicy?.speedLimit ?? 0) * 3.6)} km/h，增加跟车距离。`,
+    snow: `雪天策略：限速 ${Math.round((frame.weatherPolicy?.speedLimit ?? 0) * 3.6)} km/h，提前制动并增加车距。`,
+    fog: `雾天策略：限速 ${Math.round((frame.weatherPolicy?.speedLimit ?? 0) * 3.6)} km/h，增加观察余量。`,
+  }[frame.weather];
+  document.querySelector("#signal-explanation").textContent = weatherGuidance
+    ? `${signalGuidance} ${weatherGuidance}` : signalGuidance;
   document.querySelector("#state-light").textContent = allCaution ? phaseLabels.ALL_CAUTION : allRed ? phaseLabels.ALL_RED : (phaseLabels[frame.phase] ?? frame.phase);
   sceneRoot.dataset.signalState = station
     ? (frame.lights.EW === "绿灯" ? "GO_STATION" : "STOP_STATION")

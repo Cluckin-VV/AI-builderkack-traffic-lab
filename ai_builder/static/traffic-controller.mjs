@@ -33,7 +33,10 @@ const DEFAULT_JUNCTION = {
     bus: { length: 9.5, width: 3.06, speed_factor: 0.78, ground_offset: 0.20 },
   },
   weather_speeds: { clear: 8.5, rain: 6.2, snow: 4.2, fog: 5.2 },
-  following_gap: { normal: 2.5, snow: 4.5 },
+  // Demonstration safety margins, not a traffic-engineering certification.
+  // Weather changes the local simulation only; it never changes SceneState.
+  following_gap: { normal: 2.5, rain: 3.5, snow: 4.5, fog: 3.1 },
+  stopping_buffer: { clear: 1.8, rain: 2.4, snow: 3.2, fog: 2.2 },
   maximum_vehicles: MAX_VEHICLES,
 };
 const DEFAULT_APPROACHES = {
@@ -59,6 +62,23 @@ const cubicTangent = (a, b, c, d, t) => {
 };
 const axisFor = (approach, config) => config.approaches[approach].axis;
 const groupFor = (vehicle, config) => `${axisFor(vehicle.approach, config)}_${vehicle.movement === 'left' ? 'LEFT' : 'THROUGH'}`;
+
+const positive = (value, fallback) => Number.isFinite(value) && value > 0 ? value : fallback;
+
+// A derived renderer/simulation setting. It is deliberately not part of the
+// command protocol or server-owned SceneState snapshot.
+export function weatherSafetyPolicy(config, weather) {
+  const speeds = config.weather_speeds ?? DEFAULT_JUNCTION.weather_speeds;
+  const selected = Object.hasOwn(speeds, weather) ? weather : 'clear';
+  const gaps = config.following_gap ?? DEFAULT_JUNCTION.following_gap;
+  const buffers = config.stopping_buffer ?? DEFAULT_JUNCTION.stopping_buffer;
+  return Object.freeze({
+    weather: selected,
+    speedLimit: positive(speeds[selected], DEFAULT_JUNCTION.weather_speeds.clear),
+    followingGap: positive(gaps[selected], positive(gaps.normal, DEFAULT_JUNCTION.following_gap.normal)),
+    stoppingBuffer: positive(buffers[selected], DEFAULT_JUNCTION.stopping_buffer.clear),
+  });
+}
 
 function laneOffset(movement, config) {
   const lane = movement === 'left' ? 'left' : movement === 'right' ? 'right' : 'straight';
@@ -221,8 +241,9 @@ export class TrafficController {
         const allowed = groups[groupFor(vehicle, this.config)] === 'green';
         let limit = Infinity;
         let reason = 'moving';
+        const policy = weatherSafetyPolicy(this.config, this.weather);
         if (leader) {
-          const gap = this.weather === 'snow' ? this.config.following_gap.snow : this.config.following_gap.normal;
+          const gap = policy.followingGap;
           limit = leader.s - (leader.length + vehicle.length) / 2 - gap;
           reason = 'following';
         }
@@ -231,10 +252,10 @@ export class TrafficController {
           reason = this.mode === 'manual' && this.trafficLight === '黄灯' || this.stage === 'yellow'
             ? 'yellow_light' : 'red_light';
         }
-        const desired = this.config.weather_speeds[this.weather] * vehicle.speed_factor;
+        const desired = policy.speedLimit * vehicle.speed_factor;
         const held = !this.running && (this.layout === 'bus_stop' || vehicle.type === 'bus');
         const distance = Math.max(0, limit - vehicle.s);
-        const stoppingBuffer = reason === 'red_light' ? 1.8 : 0.65;
+        const stoppingBuffer = reason === 'red_light' ? policy.stoppingBuffer : 0.65;
         const safeApproachSpeed = Number.isFinite(limit) ? Math.sqrt(2 * 3.2 * Math.max(0, distance - stoppingBuffer)) : desired;
         const target = held ? 0 : Math.min(desired, safeApproachSpeed);
         const rate = target < vehicle.currentSpeed ? 5.2 : 2.4;
@@ -247,7 +268,7 @@ export class TrafficController {
     }
     const start = this.config.start_s ?? -72;
     const wrap = this.config.wrap_s ?? start;
-    const safeSpawnGap = this.config.following_gap.normal;
+    const safeSpawnGap = weatherSafetyPolicy(this.config, this.weather).followingGap;
     const exit = this.config.exit_approach_s ?? 72;
     for (const vehicle of this.vehicles) if (vehicle.s > exit) {
       // Re-enter behind the rearmost same-lane vehicle. A fixed wrap point can
@@ -266,12 +287,13 @@ export class TrafficController {
 
   stepBusStop() {
     const station = this.layoutData?.station ?? { stop_s: -38, entry_s: -56, exit_s: -24, lane_z: 3.3, dwell_seconds: 4 };
-    const speed = this.config.weather_speeds?.[this.weather] ?? DEFAULT_JUNCTION.weather_speeds[this.weather];
+    const policy = weatherSafetyPolicy(this.config, this.weather);
+    const speed = policy.speedLimit;
     for (const approach of ['W', 'E']) {
       const lane = this.vehicles.filter(vehicle => vehicle.approach === approach).sort((a, b) => b.s - a.s);
       let leader = null;
       for (const vehicle of lane) {
-        const followingLimit = leader ? leader.s - 14 : Infinity;
+        const followingLimit = leader ? leader.s - (14 + Math.max(0, policy.followingGap - this.config.following_gap.normal)) : Infinity;
         if (!this.running) {
           vehicle.reason = 'manual_stop';
           leader = vehicle;
@@ -354,7 +376,7 @@ export class TrafficController {
       remainingSeconds: this.mode === 'manual' ? 0 : Math.ceil(this.remaining), signalGroups,
       lights: { EW: light('EW'), NS: this.layout === 'bus_stop' ? null : light('NS') },
       clearance: this.stage === 'all_red' || (this.mode === 'manual' && !this.manualAxis && !manualCaution),
-      weather: this.weather, junction,
+      weather: this.weather, weatherPolicy: weatherSafetyPolicy(this.config, this.weather), junction,
       vehicles: this.vehicles.map(vehicle => ({ ...vehicle, ...(this.layout === 'bus_stop' ? busStopPose(vehicle, layoutData) : crossroadsPose(vehicle, this.config)) })),
     };
   }

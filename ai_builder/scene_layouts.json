@@ -34,7 +34,8 @@
         "bus": {"length": 9.5, "width": 3.06, "speed_factor": 0.78, "ground_offset": 0.20}
       },
       "weather_speeds": {"clear": 8.5, "rain": 6.2, "snow": 4.2, "fog": 5.2},
-      "following_gap": {"normal": 2.5, "snow": 4.5},
+      "following_gap": {"normal": 2.5, "rain": 3.5, "snow": 4.5, "fog": 3.1},
+      "stopping_buffer": {"clear": 1.8, "rain": 2.4, "snow": 3.2, "fog": 2.2},
       "maximum_vehicles": 24
     },
     "routes": 12,
