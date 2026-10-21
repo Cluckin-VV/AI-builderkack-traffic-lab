@@ -257,12 +257,17 @@ sceneRoot.addEventListener("traffic-frame", (event) => {
   }[frame.weather];
   document.querySelector("#signal-explanation").textContent = weatherGuidance
     ? `${signalGuidance} ${weatherGuidance}` : signalGuidance;
+  const metrics = frame.trafficMetrics;
+  document.querySelector("#traffic-experiment").textContent = metrics
+    ? `情景观测（瞬时）：${metrics.activeVehicles} 辆行驶 · ${metrics.queuedVehicles} 辆受控等待 · 行驶均速 ${metrics.movingSpeedKph} km/h · 目标车距 ${metrics.followingGapMeters} m · 红灯缓冲 ${metrics.stoppingBufferMeters} m`
+    : "情景观测准备中。";
   document.querySelector("#state-light").textContent = allCaution ? phaseLabels.ALL_CAUTION : allRed ? phaseLabels.ALL_RED : (phaseLabels[frame.phase] ?? frame.phase);
   sceneRoot.dataset.signalState = station
     ? (frame.lights.EW === "绿灯" ? "GO_STATION" : "STOP_STATION")
     : allCaution ? "CAUTION_ALL" : allRed ? "STOP_ALL" : frame.phase;
   sceneRoot.dataset.trafficPhase = frame.phase;
   sceneRoot.dataset.vehicleReasons = JSON.stringify(counts);
+  sceneRoot.dataset.trafficMetrics = JSON.stringify(metrics ?? {});
 });
 
 sceneRoot.addEventListener('render-frame', ({detail}) => {

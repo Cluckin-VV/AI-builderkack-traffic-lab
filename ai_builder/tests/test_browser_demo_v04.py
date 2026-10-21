@@ -43,6 +43,7 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertIn("让天气下暴雪", page)
         self.assertIn("让天气下陨石", page)
         self.assertIn('id="signal-explanation"', page)
+        self.assertIn('id="traffic-experiment"', page)
 
     def test_camera_controls_wait_for_the_webgl_world(self):
         _, page_body = self.get("/")
@@ -147,6 +148,16 @@ class BrowserDemoV04Tests(unittest.TestCase):
         self.assertIn("全红清空：所有进口停止", source)
         self.assertIn("全向黄灯：能安全停车的车辆", source)
         self.assertIn('frame.stage === "yellow" ? "ALL_CAUTION"', source)
+
+    def test_weather_strategy_has_controller_backed_live_observability(self):
+        _, app_body = self.get("/assets/app.js")
+        _, controller_body = self.get("/assets/traffic-controller.mjs")
+        app = app_body.decode("utf-8")
+        controller = controller_body.decode("utf-8")
+        self.assertIn('"#traffic-experiment"', app)
+        self.assertIn("frame.trafficMetrics", app)
+        self.assertIn("trafficExperimentMetrics", controller)
+        self.assertIn("server-owned analytics record", controller)
 
     def test_fingerprinted_static_asset_url_is_served(self):
         _, page_body = self.get("/")

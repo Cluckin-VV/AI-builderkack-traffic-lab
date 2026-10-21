@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { MAX_VEHICLES, TrafficController, STOP_CENTER, weatherSafetyPolicy } from '../ai_builder/static/traffic-controller.mjs';
+import { MAX_VEHICLES, TrafficController, STOP_CENTER, trafficExperimentMetrics, weatherSafetyPolicy } from '../ai_builder/static/traffic-controller.mjs';
 const layouts = JSON.parse(readFileSync(new URL('../ai_builder/scene_layouts.json', import.meta.url)));
 
 const config = {
@@ -106,6 +106,20 @@ test('rain keeps a larger actual same-lane queue gap than the clear safety margi
   const bumperGap = lane[0].s - lane[1].s - (lane[0].length + lane[1].length) / 2;
   assert.ok(bumperGap >= state.weatherPolicy.followingGap - 1e-8);
   assert.ok(state.weatherPolicy.followingGap > layouts.crossroads.junction.following_gap.normal);
+});
+test('instantaneous experiment metrics expose controller-local weather outcomes without changing scene state', () => {
+  const rainy = create({ weather: 'rain' });
+  const initial = rainy.snapshot();
+  assert.equal(initial.trafficMetrics.speedCapKph, 22);
+  assert.equal(initial.trafficMetrics.followingGapMeters, 3.5);
+  assert.equal(initial.trafficMetrics.stoppingBufferMeters, 2.4);
+  tick(rainy, 4);
+  const state = rainy.snapshot();
+  assert.ok(state.trafficMetrics.activeVehicles <= state.vehicles.length);
+  assert.ok(state.trafficMetrics.queuedVehicles <= state.vehicles.length);
+  assert.ok(state.trafficMetrics.movingSpeedKph >= 0);
+  assert.deepEqual(trafficExperimentMetrics(state.vehicles, state.weatherPolicy), state.trafficMetrics);
+  assert.throws(() => { state.trafficMetrics.speedCapKph = 1; }, TypeError);
 });
 test('fixed steps produce deterministic replay', () => {
   const a = create(), b = create();

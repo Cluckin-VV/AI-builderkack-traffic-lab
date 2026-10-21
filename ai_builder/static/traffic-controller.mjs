@@ -80,6 +80,28 @@ export function weatherSafetyPolicy(config, weather) {
   });
 }
 
+// Instantaneous, browser-local observability for the scene experiment. These
+// are not a traffic-engineering score or a server-owned analytics record.
+export function trafficExperimentMetrics(vehicles, policy) {
+  const active = vehicles.filter(vehicle => vehicle.currentSpeed >= 0.2);
+  const queued = vehicles.filter(vehicle => {
+    const reason = vehicle.reason ?? '';
+    return vehicle.currentSpeed < 0.2 && (reason.includes('red_light') || reason.includes('yellow_light')
+      || reason.includes('following') || reason === 'braking_for_stop' || reason === 'station_dwell');
+  });
+  const movingSpeedKph = active.length
+    ? active.reduce((total, vehicle) => total + vehicle.currentSpeed, 0) / active.length * 3.6
+    : 0;
+  return Object.freeze({
+    activeVehicles: active.length,
+    queuedVehicles: queued.length,
+    movingSpeedKph: Math.round(movingSpeedKph * 10) / 10,
+    speedCapKph: Math.round(policy.speedLimit * 3.6),
+    followingGapMeters: policy.followingGap,
+    stoppingBufferMeters: policy.stoppingBuffer,
+  });
+}
+
 function laneOffset(movement, config) {
   const lane = movement === 'left' ? 'left' : movement === 'right' ? 'right' : 'straight';
   return config.lane_offsets[lane];
@@ -378,6 +400,7 @@ export class TrafficController {
       clearance: this.stage === 'all_red' || (this.mode === 'manual' && !this.manualAxis && !manualCaution),
       weather: this.weather, weatherPolicy: weatherSafetyPolicy(this.config, this.weather), junction,
       vehicles: this.vehicles.map(vehicle => ({ ...vehicle, ...(this.layout === 'bus_stop' ? busStopPose(vehicle, layoutData) : crossroadsPose(vehicle, this.config)) })),
+      trafficMetrics: trafficExperimentMetrics(this.vehicles, weatherSafetyPolicy(this.config, this.weather)),
     };
   }
 }
