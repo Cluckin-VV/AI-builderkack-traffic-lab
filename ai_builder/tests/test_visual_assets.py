@@ -98,6 +98,8 @@ class VisualAssetTests(unittest.TestCase):
                 self.assertIn("turn_signal_right", components)
                 self.assertIn("windscreen_wiper", components)
                 self.assertIn("two_front_wiper_blades", model.get("wiper_detail", []))
+                if vehicle_type in ("sedan", "suv"):
+                    self.assertIn("paint", components)
                 self.assertGreater(model["dimensions"]["length"], 4)
                 self.assertLess(model["dimensions"]["length"], 10)
 
@@ -143,6 +145,7 @@ class VisualAssetTests(unittest.TestCase):
         self.assertIn("rainSprayState", scene3d)
         self.assertIn("wiperSweepState", scene3d)
         self.assertIn("wiperPivots", urban_world)
+        self.assertIn("vehiclePaintColor", scene3d)
         self.assertIn("rain-wheel-spray", scene3d)
         self.assertIn("wheelPivots", urban_world)
 

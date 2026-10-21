@@ -65,7 +65,7 @@ def cube(name, loc, size, material, bevel=.04, component=None, wheel_id=None, wi
     return obj
 
 
-def profile(name, sections, material):
+def profile(name, sections, material, component=None):
     vertices = []
     ring_size = 10
     smooth_sections = []
@@ -114,6 +114,8 @@ def profile(name, sections, material):
         polygon.use_smooth = True
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
+    if component:
+        obj["transit_component"] = component
     bevel = obj.modifiers.new("Body edge softening", "BEVEL")
     bevel.width = .055
     bevel.segments = 3
@@ -284,7 +286,7 @@ def build(kind, length, width, color, suv=False):
             (half - .22, full_width * .46, .39, .86),
             (half, full_width * .40, .40, .72),
         ]
-    body = profile("Sculpted one-piece painted body", sections, paint)
+    body = profile("Sculpted one-piece painted body", sections, paint, component="paint")
     normal_reference = body.copy()
     normal_reference.data = body.data.copy()
     bpy.context.collection.objects.link(normal_reference)
@@ -379,7 +381,7 @@ def build(kind, length, width, color, suv=False):
         (roof_rear, roof_half_width, roof_z-.065, roof_z-.02),
         ((roof_rear+roof_front)/2, roof_half_width, roof_z-.065, roof_z+.025),
         (roof_front, roof_half_width, roof_z-.065, roof_z-.02),
-    ], paint)
+    ], paint, component="paint")
     framed_window("Front windscreen", [
         (cabin_front, -cabin_half_width, cabin_bottom),
         (cabin_front, cabin_half_width, cabin_bottom),

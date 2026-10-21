@@ -8,6 +8,7 @@ const { WeatherView } = await import(new URL("./weather-view.js" + new URL(impor
 const { qualityProfile, CAMERA_PROFILES } = await import(new URL("./atmosphere-profile.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { turnSignalState } = await import(new URL("./vehicle-signals.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { rainSprayState, wiperSweepState } = await import(new URL("./vehicle-weather-effects.mjs" + new URL(import.meta.url).search, import.meta.url).href);
+const { vehiclePaintColor } = await import(new URL("./vehicle-paint.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const layoutResponse = await fetch("/assets/scene-layouts.json" + new URL(import.meta.url).search);
 if (!layoutResponse.ok) throw new Error(`Scene layout manifest: HTTP ${layoutResponse.status}`);
 const layoutDefinitions = await layoutResponse.json();
@@ -292,11 +293,13 @@ export class TransitWorld {
       if(child.userData.component==='brake_lamp'){
         child.material=child.material.clone();child.material.emissiveIntensity=.12;vehicle.brakeLights.push(child);
       }
-      // Templates share source materials.  Give only painted body panels a
-      // per-instance material so rain can alter a vehicle finish without
-      // mutating another vehicle, lenses, glass, or signal colours.
-      if(child.userData.component==='body' && child.material){
+      // Templates share source materials. Give vehicle body surfaces an
+      // instance material; only Blender-tagged primary paint receives a
+      // deterministic city palette, so trim, wheels, glass and plates retain
+      // their authored material identity.
+      if((child.userData.component==='body'||child.userData.component==='paint') && child.material){
         child.material=child.material.clone();
+        if(child.userData.component==='paint')child.material.color.setRGB(...vehiclePaintColor({vehicleType:vehicle.type,vehicleId:vehicle.id}));
         vehicle.bodyMaterials.push({
           material:child.material,
           base:{roughness:child.material.roughness,clearcoat:child.material.clearcoat,
