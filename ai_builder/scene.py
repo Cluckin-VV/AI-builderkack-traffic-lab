@@ -38,7 +38,7 @@ class ValidationError:
         return {"code": self.code, "message": self.message, "field": self.field}
 
 
-def validate_scene_action_schema(payload: Any) -> List[ValidationError]:
+def validate_scene_action_schema(payload: Any, *, allow_history: bool = False) -> List[ValidationError]:
     """Validate the v0.2/v0.3 envelope only; no SceneState is read or changed."""
     if not isinstance(payload, dict):
         return [ValidationError("INVALID_TYPE", "SceneAction must be an object")]
@@ -69,6 +69,7 @@ def validate_scene_action_schema(payload: Any) -> List[ValidationError]:
         {"color"} if action_type == "set_traffic_light" else
         {"weather"} if action_type == "set_weather" else
         {"layout"} if action_type == "set_scene_layout" else
+        {"vehicle_type", "vehicle_id"} if action_type == "remove_vehicle" and allow_history and payload.get("source") == "history_undo" else
         {"vehicle_type"} if action_type in {"add_vehicle", "remove_vehicle"} else
         {"mode"} if action_type == "set_signal_mode" else set()
     )
@@ -91,6 +92,10 @@ def validate_scene_action_schema(payload: Any) -> List[ValidationError]:
         value = payload["parameters"].get("vehicle_type")
         if not isinstance(value, str) or value not in VEHICLE_TYPES:
             errors.append(ValidationError("INVALID_ENUM", "Unsupported vehicle type", "parameters.vehicle_type"))
+        if "vehicle_id" in payload["parameters"]:
+            vehicle_id = payload["parameters"]["vehicle_id"]
+            if not isinstance(vehicle_id, str) or not vehicle_id or len(vehicle_id) > 64:
+                errors.append(ValidationError("INVALID_PARAMETER", "Invalid vehicle ID", "parameters.vehicle_id"))
     if action_type == "set_signal_mode" and isinstance(payload.get("parameters"), dict):
         value = payload["parameters"].get("mode")
         if not isinstance(value, str) or value not in {"automatic", "manual"}:
@@ -108,7 +113,11 @@ def validate_scene_action_semantics(action: "SceneAction", state: "SceneState") 
         return [ValidationError("SEMANTIC_INVALID_STATE_TRANSITION", "Bus is already stopped", "action_type")]
     if action.action_type == "add_vehicle" and len(state.vehicles) >= MAX_VEHICLES:
         return [ValidationError("SEMANTIC_CAPACITY_REACHED", f"The scene supports at most {MAX_VEHICLES} vehicles", "target")]
-    if action.action_type == "remove_vehicle" and not any(vehicle["type"] == action.parameters["vehicle_type"] for vehicle in state.vehicles):
+    if action.action_type == "remove_vehicle" and not any(
+        vehicle["type"] == action.parameters["vehicle_type"]
+        and ("vehicle_id" not in action.parameters or vehicle["id"] == action.parameters["vehicle_id"])
+        for vehicle in state.vehicles
+    ):
         return [ValidationError("SEMANTIC_TARGET_NOT_FOUND", "No matching vehicle exists in the scene", "target")]
     return []
 
@@ -202,7 +211,9 @@ class SceneState:
             self.buses = sum(vehicle["type"] == "bus" for vehicle in self.vehicles)
         elif action.action_type == "remove_vehicle":
             vehicle_type = action.parameters["vehicle_type"]
-            index = next(index for index, vehicle in enumerate(self.vehicles) if vehicle["type"] == vehicle_type)
+            vehicle_id = action.parameters.get("vehicle_id")
+            index = next(index for index, vehicle in enumerate(self.vehicles)
+                         if vehicle["type"] == vehicle_type and (vehicle_id is None or vehicle["id"] == vehicle_id))
             self.vehicles.pop(index)
             self.buses = sum(vehicle["type"] == "bus" for vehicle in self.vehicles)
         else:

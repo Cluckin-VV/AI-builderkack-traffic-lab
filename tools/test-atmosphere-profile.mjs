@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, architecturalLightLevel, vehicleHeadlampLevel, vehicleFinishProfile } from '../ai_builder/static/atmosphere-profile.mjs';
+import { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, selectCameraVehicle, architecturalLightLevel, vehicleHeadlampLevel, vehicleFinishProfile } from '../ai_builder/static/atmosphere-profile.mjs';
 
 test('weather changes blend rather than jumping on confirmation', () => {
   const blend = new AtmosphereTransition();
@@ -85,13 +85,29 @@ test('named cameras have immutable finite metre-scale poses', () => {
   assert.deepEqual(Object.keys(CAMERA_PROFILES),['bird','street','corner','traffic']);
   for(const profile of Object.values(CAMERA_PROFILES)) {
     assert.ok(Object.isFrozen(profile) && Object.isFrozen(profile.target));
-    assert.ok(profile.radius >= 25 && profile.radius < 100);
+    assert.ok(profile.radius >= 8 && profile.radius < 100);
     assert.ok(profile.phi > 0 && profile.phi < Math.PI/2);
     assert.ok(profile.target.every(Number.isFinite));
   }
   assert.ok(CAMERA_PROFILES.street.radius > 40);
   assert.ok(CAMERA_PROFILES.traffic.radius < CAMERA_PROFILES.street.radius);
   assert.deepEqual(CAMERA_PROFILES.traffic.target,[0,1.8,-2]);
+});
+
+test('vehicle camera keeps a stable target and ignores distant or malformed vehicles', () => {
+  const vehicles = Object.freeze([
+    Object.freeze({id:'bus-1',type:'bus',x:3,z:4}),
+    Object.freeze({id:'suv-2',type:'suv',x:12,z:0}),
+    Object.freeze({id:'sedan-3',type:'sedan',x:18,z:0}),
+    Object.freeze({id:'sedan-4',type:'sedan',x:60,z:0}),
+    Object.freeze({id:'broken',type:'sedan',x:NaN,z:0}),
+  ]);
+  assert.equal(selectCameraVehicle(vehicles)?.id,'sedan-3');
+  assert.equal(selectCameraVehicle(vehicles,'suv-2')?.id,'suv-2');
+  assert.equal(selectCameraVehicle(vehicles,'sedan-4')?.id,'sedan-3');
+  assert.equal(selectCameraVehicle([{id:'far',type:'sedan',x:90,z:0}]),null);
+  assert.equal(selectCameraVehicle(null),null);
+  assert.equal(vehicles.length,5);
 });
 
 test('lighting changes start at the current appearance and converge without a jump', () => {

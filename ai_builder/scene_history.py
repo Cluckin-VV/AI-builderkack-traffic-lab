@@ -9,8 +9,19 @@ from ai_builder.scene_plan import MAX_PLAN_ACTIONS, build_scene_plan, preview_sc
 
 def _restore_specs(current, target):
     specs = []
-    delta = target['buses'] - current['buses']
-    specs.extend([('add_bus' if delta > 0 else 'remove_bus', {}) for _ in range(abs(delta))])
+    current_vehicles = current.get('vehicles', [])
+    target_vehicles = target.get('vehicles', [])
+    # An append-only fleet change can be compensated by exact vehicle ID.
+    # Type-only removal would remove an older vehicle and silently renumber the scene.
+    append_only = (current_vehicles and current_vehicles[:len(target_vehicles)] == target_vehicles
+                   and current_vehicles != target_vehicles and target['buses'] == sum(
+                       vehicle['type'] == 'bus' for vehicle in target_vehicles))
+    if append_only:
+        specs.extend(('remove_vehicle', {'vehicle_type': vehicle['type'], 'vehicle_id': vehicle['id']})
+                     for vehicle in reversed(current_vehicles[len(target_vehicles):]))
+    else:
+        delta = target['buses'] - current['buses']
+        specs.extend([('add_bus' if delta > 0 else 'remove_bus', {}) for _ in range(abs(delta))])
     # Removing the last bus implicitly resets running=True; restore that detail too.
     running_after_count = True if target['buses'] == 0 else current['bus_running']
     if target['bus_running'] != running_after_count:
@@ -61,7 +72,7 @@ class SceneHistory:
         plan['plan_id'] = uuid4().hex
         # One extra compensation is needed if deleting all six stopped buses reset
         # bus_running. Ordinary user/LLM plans retain the six-action limit.
-        preview = preview_scene_plan(plan, state, max_actions=MAX_PLAN_ACTIONS + 1)
+        preview = preview_scene_plan(plan, state, max_actions=MAX_PLAN_ACTIONS + 1, allow_history=True)
         if preview['status'] == 'preview_ready' and preview['projected_state'] == saved['before']:
             store.put(plan, preview, state, undo_of=change_id)
             return {**preview, 'plan': plan, 'undo_of': change_id}

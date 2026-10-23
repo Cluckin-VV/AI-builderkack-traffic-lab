@@ -312,10 +312,22 @@ def build(kind, length, width, color, suv=False):
     transfer.max_distance = .003
     bpy.ops.object.modifier_apply(modifier=transfer.name)
     bpy.data.objects.remove(normal_reference, do_unlink=True)
-    cube("Front energy-absorbing bumper", (half - .10, 0, .48), (.20, width * .91, .25), secondary, .075)
-    cube("Rear energy-absorbing bumper", (-half + .10, 0, .47), (.20, width * .91, .23), secondary, .07)
-    cube("Full-width front lower intake", (half - .035, 0, .61), (.045, width * .57, .17), grille, .035)
-    cube("Front splitter", (half - .19, 0, .365), (.38, width * .78, .055), secondary, .018)
+    # The bumper skin follows the tapered nose/tail instead of ending in a
+    # full-width cuboid.  Keep it below the lamp line and inside the measured
+    # body envelope so the existing route dimensions remain authoritative.
+    profile("Sculpted front bumper skin", [
+        (half-.21, width*.43, .355, .585),
+        (half-.10, width*.46, .355, .605),
+        (half+.035, width*.435, .375, .565),
+    ], paint, component="paint")
+    profile("Sculpted rear bumper skin", [
+        (-half-.035, width*.425, .365, .565),
+        (-half+.10, width*.455, .35, .595),
+        (-half+.21, width*.43, .35, .575),
+    ], paint, component="paint")
+    cube("Full-width front lower intake", (half + .055, 0, .49),
+         (.025, width * .57, .135), grille, .012, component="front_intake")
+    cube("Front splitter", (half - .12, 0, .345), (.40, width * .78, .055), secondary, .018)
     cube("Rear diffuser", (-half + .17, 0, .355), (.34, width * .72, .07), secondary, .025)
     if suv:
         # A stacked fascia gives the tall SUV nose a readable depth hierarchy:
@@ -327,11 +339,11 @@ def build(kind, length, width, color, suv=False):
         for z in (.682, .733, .784):
             cube("SUV upper grille horizontal fin", (half + .015, 0, z),
                  (.012, width * .41, .012), secondary, .006)
-        cube("SUV lower intake crossblade", (half + .014, 0, .558),
-             (.014, width * .53, .035), secondary, .010)
+        cube("SUV lower intake crossblade", (half + .075, 0, .49),
+             (.014, width * .53, .025), secondary, .008)
         for side in (-1, 1):
-            cube("SUV outer intake fin", (half + .011, side * width * .365, .56),
-                 (.012, .075, .13), secondary, .010)
+            cube("SUV outer intake fin", (half + .075, side * width * .265, .49),
+                 (.012, .045, .11), secondary, .008)
     for side in (-1, 1):
         cube("Sculpted side sill", (0, side * (width * .485), .44),
              (2*(wheel_x-tire_r-.06), .10, .17), secondary, .045)
@@ -531,23 +543,30 @@ def build(kind, length, width, color, suv=False):
     for side in (-1, 1):
         if suv:
             cube("SUV matrix headlamp housing", (half - .024, side * width * .275, .695),
-                 (.05, .34, .13), grille, .027)
+                 (.05, .34, .13), grille, .027, component="headlamp_bezel")
             cube("SUV matrix projector optic", (half + .007, side * width * .275, .685),
                  (.008, .215, .052), headlamp, .014, component="headlamp")
             cube("SUV signature daytime light", (half + .010, side * width * .275, .752),
                  (.007, .285, .017), headlamp, .006, component="headlamp")
+            # Inner optical separators make the light read as a recessed unit,
+            # not one emissive rectangle. They do not emit or affect signals.
+            for offset in (-.095, 0, .095):
+                cube("SUV matrix optical divider", (half + .010, side * width * .275 + offset, .684),
+                     (.006, .009, .053), secondary, .003, component="headlamp_bezel")
         else:
             cube("Projector headlamp housing", (half - .02, side * width * .25, .665),
-                 (.04, .38, .13), grille, .018)
+                 (.04, .38, .13), grille, .018, component="headlamp_bezel")
             for offset in (-.083, .083):
                 bezel = cylinder("Round projector bezel", (half+.003, side*width*.25+offset, .653),
-                                 .045, .014, alloy, vertices=24)
+                                 .045, .014, alloy, component="headlamp_bezel", vertices=24)
                 bezel.rotation_euler = (0, math.pi/2, 0)
                 lens = cylinder("Recessed projector lens", (half+.011, side*width*.25+offset, .653),
                                 .033, .004, headlamp, "headlamp", vertices=24)
                 lens.rotation_euler = (0, math.pi/2, 0)
             cube("Upper daytime running light", (half+.004, side*width*.25, .707),
                  (.006, .29, .012), headlamp, .003, component="headlamp")
+            cube("Sedan lower optical brow", (half+.003, side*width*.25, .609),
+                 (.007, .33, .008), alloy, .003, component="headlamp_bezel")
         cube("Tail lamp dark surround", (-half + .02, side * width * .27, .665),
              (.04, .34, .13), secondary, .018)
         turn_side = "left" if side < 0 else "right"
@@ -559,8 +578,10 @@ def build(kind, length, width, color, suv=False):
              (.18, .024, .06), amber, .02, component="turn_signal_" + turn_side)
     for y in (-.43, -.28, -.14, 0, .14, .28, .43):
         cube("Front grille vertical", (half - .05, y, .66), (.035, .025, .13), alloy, .008)
-    cube("Unbranded front plate", (half - .03, 0, .47), (.025, .40, .105), plate, .012)
-    cube("Unbranded rear plate", (-half + .03, 0, .47), (.025, .40, .105), plate, .012)
+    cube("Unbranded front plate", (half + .082, 0, .49),
+         (.016, .40, .105), plate, .009, component="registration_plate")
+    cube("Unbranded rear plate", (-half - .082, 0, .48),
+         (.016, .40, .105), plate, .009, component="registration_plate")
 
     # A subtle rear lip differs from the SUV's practical roof spoiler.
     if suv:

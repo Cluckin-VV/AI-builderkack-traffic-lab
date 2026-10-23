@@ -119,6 +119,24 @@ class VisualAssetTests(unittest.TestCase):
                 self.assertIn("alternating_tread_blocks", model.get("wheel_detail", []))
                 self.assertIn("door_gap", components)
 
+    def test_passenger_front_fascia_keeps_intake_and_plate_in_front_of_skin(self):
+        for kind in ("sedan", "suv"):
+            with self.subTest(kind=kind):
+                model = json.loads(self.get(f"/assets/models/city-{kind}-v1.json")[2])
+                half_length = model["body_dimensions"]["length"] / 2
+                batches = list(model["batches"].values())
+                intake = [b for b in batches if b["component"] == "front_intake"]
+                plates = [b for b in batches if b["component"] == "registration_plate"]
+                bezels = [b for b in batches if b["component"] == "headlamp_bezel"]
+                self.assertEqual(len(intake), 1)
+                self.assertTrue(bezels)
+                self.assertTrue(plates)
+                self.assertGreater(min(intake[0]["positions"][0::3]), half_length,
+                                   "front intake must not be buried inside the body")
+                plate_x = [x for batch in plates for x in batch["positions"][0::3]]
+                self.assertGreater(max(plate_x), half_length)
+                self.assertLess(min(plate_x), -half_length)
+
     def test_passenger_tires_have_open_hubs_and_concentric_axles(self):
         for kind in ("sedan", "suv"):
             model = json.loads(self.get(f"/assets/models/city-{kind}-v1.json")[2])

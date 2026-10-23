@@ -21,12 +21,23 @@ export const CAMERA_PROFILES = Object.freeze({
   bird: Object.freeze({ radius: 92, theta: .82, phi: .59, target: Object.freeze([0, 2.5, 0]) }),
   street: Object.freeze({ radius: 48, theta: .01, phi: 1.525, target: Object.freeze([0, 2.5, 0]) }),
   corner: Object.freeze({ radius: 30.6, theta: -2.24, phi: 1.54, target: Object.freeze([29, 5, 32]) }),
-  // A fixed roadside observation point: it shows actual wheel, lamp and signal
-  // behaviour without following or influencing a simulated vehicle.
-  // Offset from the signal masts so this is an actual roadside vehicle view,
-  // rather than a close-up of a foreground signal head.
-  traffic: Object.freeze({ radius: 34, theta: -.86, phi: 1.32, target: Object.freeze([0, 1.8, -2]) }),
+  // The near-vehicle observer orbits a live, read-only traffic snapshot.
+  traffic: Object.freeze({ radius: 14, theta: -.86, phi: 1.24, target: Object.freeze([0, 1.8, -2]) }),
 });
+
+export function selectCameraVehicle(vehicles, previousId = null, maxDistance = 45) {
+  if (!Array.isArray(vehicles)) return null;
+  const inView = vehicles.filter(vehicle => vehicle && typeof vehicle.id === 'string'
+    && Number.isFinite(vehicle.x) && Number.isFinite(vehicle.z)
+    && Math.hypot(vehicle.x, vehicle.z) <= maxDistance);
+  const retained = inView.find(vehicle => vehicle.id === previousId);
+  if (retained) return retained;
+  const rank = { sedan: 0, suv: 1, bus: 2 };
+  inView.sort((a, b) => (rank[a.type] ?? 3) - (rank[b.type] ?? 3)
+    || Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z)
+    || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return inView[0] ?? null;
+}
 
 export function architecturalLightLevel(weatherLamp, style = 'daylight') {
   const lamp = Number.isFinite(weatherLamp) ? Math.max(0, Math.min(1, weatherLamp)) : 0;

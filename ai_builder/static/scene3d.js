@@ -5,7 +5,7 @@ const { createAtmosphere, createCity, createBusStopDistrict, batchStaticCity, lo
 );
 const { TrafficController, MAX_VEHICLES } = await import(new URL("./traffic-controller.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { WeatherView } = await import(new URL("./weather-view.js" + new URL(import.meta.url).search, import.meta.url).href);
-const { qualityProfile, CAMERA_PROFILES } = await import(new URL("./atmosphere-profile.mjs" + new URL(import.meta.url).search, import.meta.url).href);
+const { qualityProfile, CAMERA_PROFILES, selectCameraVehicle } = await import(new URL("./atmosphere-profile.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { turnSignalState } = await import(new URL("./vehicle-signals.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { rainSprayState, wiperSweepState } = await import(new URL("./vehicle-weather-effects.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { vehiclePaintColor } = await import(new URL("./vehicle-paint.mjs" + new URL(import.meta.url).search, import.meta.url).href);
@@ -123,6 +123,8 @@ export class TransitWorld {
     this.activeLayout = 'crossroads';
     this.layoutDefinitions = layoutDefinitions;
     this.cameraMode = 'bird';
+    this.cameraVehicleId = null;
+    this.lastTrafficSnapshot = null;
     this.districts = new Map();
 
     try {
@@ -373,6 +375,7 @@ export class TransitWorld {
   }
 
   applyTrafficSnapshot(snapshot, deltaSeconds=0) {
+    this.lastTrafficSnapshot = snapshot;
     if(deltaSeconds>0)this.presentationTime+=deltaSeconds;
     for (const signal of this.signalHeads) {
       const stage = snapshot.signalGroups?.[signal.groupKey] ?? "red";
@@ -429,6 +432,15 @@ export class TransitWorld {
       const nextScale = THREE.MathUtils.lerp(currentScale, rendered.group.userData.targetScale, 0.12);
       rendered.group.scale.setScalar(nextScale);
     });
+    if (this.cameraMode === 'traffic') {
+      const focus = selectCameraVehicle(snapshot.vehicles, this.cameraVehicleId);
+      this.cameraVehicleId = focus?.id ?? null;
+      this.container.dataset.cameraFocus = this.cameraVehicleId ?? '';
+      const destination = focus ? new THREE.Vector3(focus.x, 1.4, focus.z)
+        : new THREE.Vector3(...CAMERA_PROFILES.traffic.target);
+      this.target.lerp(destination, deltaSeconds > 0 ? 1 - Math.exp(-deltaSeconds * 5) : 1);
+      this.updateCamera();
+    }
     const now = performance.now();
     if (now - this.lastTrafficEvent > 200) {
       this.lastTrafficEvent = now;
@@ -470,7 +482,8 @@ export class TransitWorld {
     canvas.addEventListener("pointercancel", release);
     canvas.addEventListener("wheel", (event) => {
       event.preventDefault();
-      this.spherical.radius = THREE.MathUtils.clamp(this.spherical.radius + event.deltaY * 0.035, 18, this.activeLayout==='bus_stop'?110:72);
+      this.spherical.radius = THREE.MathUtils.clamp(this.spherical.radius + event.deltaY * 0.035,
+        this.cameraMode === 'traffic' ? 8 : 18, this.activeLayout==='bus_stop'?110:72);
       this.updateCamera();
     }, { passive: false });
     canvas.style.cursor = "grab";
@@ -500,7 +513,11 @@ export class TransitWorld {
   resetCamera() {
     const profile = CAMERA_PROFILES[this.cameraMode] ?? DEFAULT_CAMERA;
     this.spherical = { ...(this.cameraMode === 'bird' ? this.layoutCamera ?? profile : profile) };
-    this.target.set(...profile.target);
+    const focus = this.cameraMode === 'traffic'
+      ? selectCameraVehicle(this.lastTrafficSnapshot?.vehicles, this.cameraVehicleId) : null;
+    this.cameraVehicleId = focus?.id ?? null;
+    this.container.dataset.cameraFocus = this.cameraVehicleId ?? '';
+    this.target.set(...(focus ? [focus.x, 1.4, focus.z] : profile.target));
     this.updateCamera();
     this.container.dataset.cameraMode = this.cameraMode;
   }

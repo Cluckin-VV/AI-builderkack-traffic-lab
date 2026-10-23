@@ -183,7 +183,8 @@ def _make_action(payload: Dict[str, Any], command: str) -> SceneAction:
     )
 
 
-def preview_scene_plan(plan: Dict[str, Any], state: SceneState, *, max_actions: int = MAX_PLAN_ACTIONS) -> Dict[str, Any]:
+def preview_scene_plan(plan: Dict[str, Any], state: SceneState, *, max_actions: int = MAX_PLAN_ACTIONS,
+                       allow_history: bool = False) -> Dict[str, Any]:
     before = state.snapshot()
     required = {"plan_version", "plan_id", "source_command", "actions"}
     if set(plan) != required or plan.get("plan_version") != PLAN_VERSION:
@@ -198,7 +199,7 @@ def preview_scene_plan(plan: Dict[str, Any], state: SceneState, *, max_actions: 
     simulated = deepcopy(state)
     steps = []
     for index, payload in enumerate(actions):
-        schema_errors = validate_scene_action_schema(payload) if isinstance(payload, dict) else []
+        schema_errors = validate_scene_action_schema(payload, allow_history=allow_history) if isinstance(payload, dict) else []
         if not isinstance(payload, dict) or schema_errors:
             code = "INVALID_ACTION" if not schema_errors else schema_errors[0].code
             return {"status": "rejected", "validation_stage": "schema", "error_code": code, "failed_step": index, "steps": steps, "state_before": before, "state_after": before}
@@ -239,7 +240,8 @@ def execute_pending_plan(plan_id: str, state: SceneState, store: PendingPlanStor
         return {"status": "rejected", "error_code": "PLAN_NOT_FOUND", "state_before": before, "state_after": before}
     if pending["state_before"] != before:
         return {"status": "rejected", "error_code": "STALE_PLAN", "state_before": before, "state_after": before}
-    preview = preview_scene_plan(pending["plan"], state, max_actions=MAX_PLAN_ACTIONS + (1 if pending.get("undo_of") else 0))
+    preview = preview_scene_plan(pending["plan"], state, max_actions=MAX_PLAN_ACTIONS + (1 if pending.get("undo_of") else 0),
+                                 allow_history=bool(pending.get("undo_of")))
     if preview.get("status") != "preview_ready":
         return {**preview, "state_after": before}
 

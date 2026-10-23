@@ -7,7 +7,7 @@ from pathlib import Path
 from threading import Thread
 from unittest.mock import patch
 
-from ai_builder.scene import SceneState, EventLog
+from ai_builder.scene import SceneState, EventLog, validate_scene_action_schema
 from ai_builder.scene_plan import DeterministicScenePlanner, PendingPlanStore, preview_scene_plan, execute_pending_plan
 from ai_builder.scene_history import SceneHistory
 from ai_builder.server import SceneHandler
@@ -41,6 +41,31 @@ class SceneHistoryTests(unittest.TestCase):
         self.history.finish_undo(change_id)
         self.assertEqual(self.state.snapshot(), initial)
         self.assertFalse(self.history.status(self.state)['available'])
+
+    def test_append_only_typed_fleet_undo_preserves_existing_vehicle_ids_and_routes(self):
+        self.state = SceneState.demo()
+        initial = self.state.snapshot()
+        self.commit('增加四辆SUV然后增加两辆公交车')
+        after = self.state.snapshot()
+        change_id = self.history.status(self.state)['change_id']
+        undo = self.history.prepare_undo(change_id, self.state, self.store)
+        self.assertEqual(undo['status'], 'preview_ready')
+        self.assertEqual(undo['projected_state'], initial)
+        self.assertEqual(self.state.snapshot(), after)
+        self.assertEqual(len(undo['steps']), 6)
+        self.assertTrue(all(step['action_type'] == 'remove_vehicle' for step in undo['steps']))
+        self.assertTrue(all(action['parameters']['vehicle_id'] for action in undo['plan']['actions']))
+        self.assertEqual(execute_pending_plan(undo['plan']['plan_id'], self.state, self.store)['status'], 'accepted')
+        self.history.finish_undo(change_id)
+        self.assertEqual(self.state.snapshot(), initial)
+
+    def test_history_vehicle_id_is_not_allowed_in_public_action(self):
+        payload = {'protocol_version': '0.3', 'action_id': 'x', 'action_type': 'remove_vehicle',
+                   'parameters': {'vehicle_type': 'suv', 'vehicle_id': 'suv-1'}, 'source': 'scene_planner'}
+        self.assertIn('UNKNOWN_FIELD', [error.code for error in validate_scene_action_schema(payload)])
+        payload['source'] = 'history_undo'
+        self.assertIn('UNKNOWN_FIELD', [error.code for error in validate_scene_action_schema(payload)])
+        self.assertEqual(validate_scene_action_schema(payload, allow_history=True), [])
 
     def test_restore_six_deleted_stopped_buses_includes_implicit_motion_state(self):
         self.state = SceneState(buses=6, bus_running=False)
@@ -131,6 +156,21 @@ class WorkbenchHttpTests(unittest.TestCase):
         self.assertEqual(self.handler.state.snapshot(), SceneState().snapshot())
         self.assertFalse(undone['undo']['available'])
         self.assertEqual(self.execute(preview)['status'], 'rejected')
+
+    def test_http_typed_fleet_undo_preview_and_confirmation(self):
+        self.handler.state = SceneState.demo()
+        initial = self.handler.state.snapshot()
+        executed = self.execute(self.preview('增加两辆SUV'))
+        self.assertEqual(executed['status'], 'accepted')
+        change_id = executed['undo']['change_id']
+        status, undo = self.request('/history/undo-preview', {'change_id': change_id})
+        self.assertEqual(status, 200)
+        self.assertEqual(undo['status'], 'preview_ready')
+        self.assertEqual(undo['projected_state'], initial)
+        self.assertNotEqual(self.handler.state.snapshot(), initial)
+        reverted = self.execute(undo)
+        self.assertEqual(reverted['status'], 'accepted')
+        self.assertEqual(self.handler.state.snapshot(), initial)
 
     def test_new_accepted_change_invalidates_existing_previews(self):
         old = self.preview('让天气下雪')
