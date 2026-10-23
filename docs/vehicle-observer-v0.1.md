@@ -19,3 +19,7 @@ This is an explanation surface, not a simulation control. The authoritative comm
 `natural language → Schema → Semantic → preview → confirm → apply → undo`.
 
 The panel makes the controller's existing reasons legible without introducing a second, mutable traffic path.
+
+## Browser-loading regression and release gate
+
+The first public Vehicle Observer deployment exposed a missing static route for `vehicle-paint.mjs`. `/health` and the observer module returned successfully, but the WebGL entry module could not load, leaving the scene in its fallback state. The HTTP host now serves that dependency explicitly. A regression test checks that every local module URL imported by `scene3d.js` returns JavaScript from the host, and the vehicle-paint source participates in the runtime fingerprint. Release verification must also open the public page in a real browser and confirm an active WebGL scene, populated observer, and no module-loading errors; a healthy `/health` response alone is insufficient.

@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
@@ -69,6 +70,7 @@ class BrowserDemoV04Tests(unittest.TestCase):
             "/assets/road-markings.mjs": "text/javascript",
             "/assets/vehicle-signals.mjs": "text/javascript",
             "/assets/vehicle-weather-effects.mjs": "text/javascript",
+            "/assets/vehicle-paint.mjs": "text/javascript",
             "/assets/vehicle-observer.mjs": "text/javascript",
         }
         for path, content_type in expected.items():
@@ -77,6 +79,17 @@ class BrowserDemoV04Tests(unittest.TestCase):
                 self.assertEqual(response.status, 200)
                 self.assertIn(content_type, response.getheader("Content-Type"))
                 self.assertTrue(body)
+
+    def test_scene_module_imports_are_served_by_the_http_host(self):
+        _, body = self.get("/assets/scene3d.js")
+        imports = set(re.findall(r'new URL\("\./([\w.-]+\.(?:js|mjs))"', body.decode("utf-8")))
+        self.assertIn("vehicle-paint.mjs", imports)
+        for name in imports:
+            with self.subTest(module=name):
+                response, module = self.get(f"/assets/{name}")
+                self.assertEqual(response.status, 200)
+                self.assertIn("text/javascript", response.getheader("Content-Type"))
+                self.assertTrue(module)
 
     def test_state_endpoint_hydrates_renderer_without_mutation(self):
         before = SceneHandler.state.snapshot()

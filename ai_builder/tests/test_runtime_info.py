@@ -1,5 +1,7 @@
 import json
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
 from threading import Thread
@@ -19,6 +21,19 @@ class RuntimeIdentityTests(unittest.TestCase):
         second = source_fingerprint()
         self.assertEqual(first, second)
         self.assertRegex(first, r"^[0-9a-f]{8,12}$")
+
+    def test_vehicle_paint_source_change_changes_fingerprint(self):
+        source = Path(__file__).resolve().parents[1] / "static" / "vehicle-paint.mjs"
+        original_read_bytes = Path.read_bytes
+
+        def modified_read_bytes(path):
+            content = original_read_bytes(path)
+            return content + b"\n// fingerprint probe" if path == source else content
+
+        baseline = source_fingerprint()
+        with patch.object(Path, "read_bytes", modified_read_bytes):
+            changed = source_fingerprint()
+        self.assertNotEqual(baseline, changed)
 
     def test_health_endpoint_returns_runtime_identity(self):
         server = ThreadingHTTPServer(("127.0.0.1", 0), SceneHandler)
