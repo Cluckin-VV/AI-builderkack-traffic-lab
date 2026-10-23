@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { observeVehicles, vehicleObserverSummary } from '../ai_builder/static/vehicle-observer.mjs';
+import { observeVehicles, vehicleObserverSummary, vehicleObserverCountLabel } from '../ai_builder/static/vehicle-observer.mjs';
 
 test('vehicle observer prioritises a controlled vehicle and preserves its stable id', () => {
   const observed = observeVehicles({ vehicles: [
@@ -22,4 +22,11 @@ test('vehicle observer makes malformed frames safe and gives an empty-state summ
   assert.equal(observed[0].speedKph, 0);
   assert.equal(observed[0].reason, 'ready');
   assert.match(observed[0].displayId, /…$/);
+});
+
+test('observer distinguishes projected vehicles from committed live vehicles', () => {
+  const projected = { vehicles: Array.from({ length: 14 }, (_, index) => ({ id: `suv-${index}` })) };
+  assert.equal(vehicleObserverCountLabel(projected, true), 'PREVIEW · 14');
+  assert.equal(vehicleObserverCountLabel(projected, false), 'LIVE · 14');
+  assert.equal(vehicleObserverCountLabel(undefined, true), 'PREVIEW · 0');
 });

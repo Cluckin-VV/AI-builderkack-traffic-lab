@@ -73,3 +73,8 @@ export function vehicleObserverSummary(frame) {
   const watched = observeVehicles(frame, { limit: 1 })[0];
   return `优先显示受控车辆：${watched.typeLabel} ${watched.displayId} · ${watched.reasonLabel}`;
 }
+
+export function vehicleObserverCountLabel(frame, isPreview = false) {
+  const count = Array.isArray(frame?.vehicles) ? frame.vehicles.length : 0;
+  return `${isPreview ? 'PREVIEW' : 'LIVE'} · ${count}`;
+}

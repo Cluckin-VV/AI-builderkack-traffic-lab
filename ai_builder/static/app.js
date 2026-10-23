@@ -1,7 +1,7 @@
 const buildFingerprint = document.querySelector('meta[name="build-fingerprint"]')?.content ?? "dev";
 const { buildEditorCommand } = await import(`/assets/scene-editor.mjs?v=${encodeURIComponent(buildFingerprint)}`);
 const { compareWeatherScenarios } = await import(`/assets/traffic-controller.mjs?v=${encodeURIComponent(buildFingerprint)}`);
-const { observeVehicles, vehicleObserverSummary } = await import(`/assets/vehicle-observer.mjs?v=${encodeURIComponent(buildFingerprint)}`);
+const { observeVehicles, vehicleObserverSummary, vehicleObserverCountLabel } = await import(`/assets/vehicle-observer.mjs?v=${encodeURIComponent(buildFingerprint)}`);
 
 const form = document.querySelector("#command-form");
 const promptInput = document.querySelector("#prompt");
@@ -100,6 +100,10 @@ function updateUndoControl(undo) {
 function restoreLiveScene() {
   previewBadge.hidden = true;
   sceneRoot.dataset.preview = "false";
+  const liveCount = Array.isArray(lastScene.vehicles)
+    ? lastScene.vehicles.length : Number(lastScene.bus_count ?? lastScene.buses ?? 0);
+  document.querySelector("#vehicle-count-label").textContent = "车辆总数";
+  document.querySelector("#bus-count").textContent = String(liveCount);
   world?.syncState(lastScene);
 }
 
@@ -295,7 +299,7 @@ sceneRoot.addEventListener("traffic-frame", (event) => {
 
 function renderVehicleObserver(frame) {
   const observed = observeVehicles(frame);
-  vehicleObserverCount.textContent = `LIVE · ${Array.isArray(frame?.vehicles) ? frame.vehicles.length : 0}`;
+  vehicleObserverCount.textContent = vehicleObserverCountLabel(frame, sceneRoot.dataset.preview === 'true');
   vehicleObserverSummaryElement.textContent = vehicleObserverSummary(frame);
   vehicleObserverList.replaceChildren();
   if (!observed.length) {
@@ -504,6 +508,8 @@ function showPlanPreview(result) {
   planPreview.hidden = false;
   previewBadge.hidden = false;
   sceneRoot.dataset.preview = "true";
+  document.querySelector("#vehicle-count-label").textContent = "预演车辆";
+  document.querySelector("#bus-count").textContent = String(total);
   resumeAutoSignalButton.disabled = true;
   world?.syncState(result.projected_scene ?? projected);
   window.__lastUndo = result.undo;
