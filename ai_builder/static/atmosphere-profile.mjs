@@ -22,7 +22,9 @@ export const CAMERA_PROFILES = Object.freeze({
   street: Object.freeze({ radius: 48, theta: .01, phi: 1.525, target: Object.freeze([0, 2.5, 0]) }),
   corner: Object.freeze({ radius: 30.6, theta: -2.24, phi: 1.54, target: Object.freeze([29, 5, 32]) }),
   // The near-vehicle observer orbits a live, read-only traffic snapshot.
-  traffic: Object.freeze({ radius: 14, theta: -.86, phi: 1.24, target: Object.freeze([0, 1.8, -2]) }),
+  // Stay above the crossing's near-side signal gantry while keeping a useful
+  // three-quarter view of the vehicle; the older 1.24-radian pose cut through it.
+  traffic: Object.freeze({ radius: 14, theta: .62, phi: .93, target: Object.freeze([0, 1.8, -2]) }),
 });
 
 export function selectCameraVehicle(vehicles, previousId = null, maxDistance = 45) {

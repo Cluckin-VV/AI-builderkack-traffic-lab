@@ -126,6 +126,59 @@ def profile(name, sections, material, component=None):
     return obj
 
 
+def wheel_arch_flare(name, axle_x, wheel_z, tire_radius, body_sections, side, material):
+    """Sweep a shallow three-stage flare over the actual cut wheel opening.
+
+    Match the sloping body shoulder at each sample; a constant-Y torus would
+    float above the bonnet and disappear into the lower sill.  This is visual
+    trim only, never part of a rotating wheel or the traffic collision shape.
+    """
+    vertices = []
+    segments = 24
+    for step in range(segments + 1):
+        angle = math.pi * step / segments
+        for radial, lift in ((.053, .030), (.087, .067), (.132, .027)):
+            radius = tire_radius + radial
+            x = axle_x + math.cos(angle) * radius
+            z = wheel_z + math.sin(angle) * radius
+            for index in range(len(body_sections) - 1):
+                left, right = body_sections[index:index + 2]
+                if x <= right[0]:
+                    t = max(0.0, min(1.0, (x - left[0]) / (right[0] - left[0])))
+                    half_width = left[1] + (right[1] - left[1]) * t
+                    bottom = left[2] + (right[2] - left[2]) * t
+                    top = left[3] + (right[3] - left[3]) * t
+                    break
+            else:
+                half_width, bottom, top = body_sections[-1][1:]
+            height_fraction = max(0.0, min(1.0, (z - bottom) / (top - bottom)))
+            if height_fraction < .10:
+                shoulder = .78 + 1.6 * height_fraction
+            elif height_fraction < .52:
+                shoulder = .94 + .06 * (height_fraction - .10) / .42
+            elif height_fraction < .88:
+                shoulder = 1.0 - .06 * (height_fraction - .52) / .36
+            else:
+                shoulder = .94 - .15 * (height_fraction - .88) / .12
+            vertices.append((x, side * (half_width * shoulder + lift), z))
+    faces = []
+    for step in range(segments):
+        for band in range(2):
+            a, b = step * 3 + band, (step + 1) * 3 + band
+            face = (a, b, b + 1, a + 1)
+            faces.append(face if side > 0 else tuple(reversed(face)))
+    mesh = bpy.data.meshes.new(name + " mesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.materials.append(material)
+    mesh.update()
+    for polygon in mesh.polygons:
+        polygon.use_smooth = True
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    obj["transit_component"] = "wheel_arch"
+    return obj
+
+
 def panel(name, coords, material, component=None):
     mesh = bpy.data.meshes.new(name + " mesh")
     mesh.from_pydata(coords, [], [(0, 1, 2, 3)])
@@ -188,6 +241,19 @@ def torus(name, loc, major_radius, minor_radius, material, component=None, wheel
     return obj
 
 
+def ellipsoid(name, loc, size, material, component):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=1, location=loc)
+    obj = bpy.context.object
+    obj.name = name
+    obj.scale = tuple(axis / 2 for axis in size)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    obj.data.materials.append(material)
+    for face in obj.data.polygons:
+        face.use_smooth = True
+    obj["transit_component"] = component
+    return obj
+
+
 def annular_wheel(name, loc, section, material, wheel_id):
     """Revolve a radial/axial section around the axle; leave the hub opening clear."""
     vertices, faces = [], []
@@ -239,6 +305,9 @@ def build(kind, length, width, color, suv=False):
     glass.node_tree.nodes["Principled BSDF"].inputs["Alpha"].default_value = .52
     glass.surface_render_method = 'DITHERED'
     upholstery = mat("Charcoal woven upholstery", (.09, .085, .075), 0, .88)
+    seat_insert = mat("Soft woven seat insert", (.145, .151, .145), 0, .92)
+    occupant_cloth = mat("Unbranded driver jacket silhouette", (.072, .10, .12), 0, .88)
+    occupant_head = mat("Unbranded driver head silhouette", (.34, .27, .21), 0, .86)
     rubber = mat("Road tire rubber", (.012, .016, .019), .02, .86)
     alloy = mat("Forged satin alloy", (.50, .57, .59), .82, .20, coat=.18, coat_rough=.16)
     rotor = mat("Ventilated brake rotor", (.19, .22, .23), .76, .30)
@@ -312,6 +381,11 @@ def build(kind, length, width, color, suv=False):
     transfer.max_distance = .003
     bpy.ops.object.modifier_apply(modifier=transfer.name)
     bpy.data.objects.remove(normal_reference, do_unlink=True)
+    for axle_name, axle_x in (("front", wheel_x), ("rear", -wheel_x)):
+        for side_name, side in (("left", -1), ("right", 1)):
+            wheel_arch_flare("Sculpted " + axle_name + " " + side_name + " wheel arch",
+                             axle_x, wheel_z, tire_r, sections, side,
+                             secondary if suv else paint)
     # The bumper skin follows the tapered nose/tail instead of ending in a
     # full-width cuboid.  Keep it below the lamp line and inside the measured
     # body envelope so the existing route dimensions remain authoritative.
@@ -363,21 +437,43 @@ def build(kind, length, width, color, suv=False):
     roof_front = length * .055
     cabin_half_width = width * (.435 if suv else .405)
     roof_half_width = width * (.40 if suv else .365)
-    # Upper cabin detail is real geometry behind tinted panes. The opaque body
-    # hides the lower cabin; no expensive refractive render pass is required.
-    floor_z = (1.015 if suv else max(body_height, cabin_bottom)+.015)
+    # Keep the floor and cushion well below the dashboard. The previous floor
+    # sat at the body waistline, making occupants appear perched on the dash.
+    # Opaque door panels naturally hide the lower seating position.
+    floor_z = .60 if suv else .54
     cube("Dark cabin floor", ((cabin_front+cabin_rear)/2, 0, floor_z),
          (cabin_front-cabin_rear-.08, cabin_half_width*1.98, .025), secondary, .01,
          component="dashboard")
-    for seat_x in (.03, -.77):
+    for seat_x in (.08, -.94):
+        rear_row = seat_x < 0
+        seat_back_height = (.55 if rear_row else .70) if suv else (.43 if rear_row else .55)
+        headrest_height = (.77 if rear_row else .96) if suv else (.60 if rear_row else .79)
         for side in (-1, 1):
             seat_y = side * width * .23
             cube("Seat cushion", (seat_x, seat_y, floor_z+.065),
-                 (.43, .40, .10), upholstery, .04, component="seat")
-            cube("Seat back", (seat_x-.21, seat_y, floor_z+.18),
-                 (.10, .39, .29), upholstery, .04, component="seat", rotation=(0,-.10,0))
-            cube("Seat head restraint", (seat_x-.22, seat_y, floor_z+.335),
-                 (.10, .20, .11), upholstery, .035, component="seat")
+                 (.43, .40, .10), upholstery, .04, component="seat_cushion")
+            cube("Padded seat centre", (seat_x+.012, seat_y, floor_z+.12),
+                 (.34, .30, .018), seat_insert, .009, component="seat_cushion")
+            cube("Contoured seat back", (seat_x-.20, seat_y, floor_z+.20+seat_back_height/2),
+                 (.16, .37, seat_back_height), upholstery, .065, component="seat",
+                 rotation=(0,-.10,0))
+            cube("Upholstered back insert", (seat_x-.105, seat_y, floor_z+.20+seat_back_height/2),
+                 (.014, .25, seat_back_height*.66), seat_insert, .007, component="seat")
+            cube("Seat head restraint", (seat_x-.23, seat_y, floor_z+headrest_height),
+                 (.17, .22, .12), upholstery, .055,
+                 component="rear_headrest" if rear_row else "seat")
+    # An anonymous seated driver is a scale cue only, not simulated agency.
+    driver_y = -width * .23
+    driver_mid = floor_z + (.63 if suv else .59)
+    ellipsoid("Driver jacket torso", (.055, driver_y, driver_mid),
+              (.29, .31, .46 if suv else .28), occupant_cloth, "driver_silhouette")
+    ellipsoid("Driver head", (.13, driver_y, floor_z + (.94 if suv else .77)),
+              (.15, .15, .17), occupant_head, "driver_silhouette")
+    for arm_side in (-1, 1):
+        cube("Driver forearm at wheel", (.35, driver_y + arm_side*.115,
+             floor_z + (.67 if suv else .56)),
+             (.43, .065, .065), occupant_cloth, .026, component="driver_silhouette",
+             rotation=(0, -.13, 0))
     cube("Dashboard upper pad", (cabin_front-.20, 0, cabin_bottom+.035),
          (.31, width*.69, .09), secondary, .035, component="dashboard")
     steering = torus("Steering rim", (cabin_front-.40, -width*.23, cabin_bottom+.16),
@@ -656,6 +752,14 @@ def build(kind, length, width, color, suv=False):
         "wheel_detail": ["open_alloy", "five_lug_nuts", "alternating_tread_blocks", "fixed_caliper"],
         "wiper_detail": ["two_front_wiper_blades", "rain_presentation_pivots"],
         "wheel_radius": tire_r,
+        "interior_layout": {"floor_height": floor_z,
+                            "cushion_top_height": round(floor_z + .129, 3),
+                            "dashboard_top_height": round(cabin_bottom + .08, 3),
+                            "rear_seat_x": -.94,
+                            "front_seat_x": .08,
+                            "driver_head_x": .13,
+                            "steering_wheel_x": round(cabin_front - .40, 3),
+                            "dashboard_x": round(cabin_front - .20, 3)},
         "body_dimensions": {"length": length, "height": round(maximum[1] - minimum[1], 3), "width": width},
         "overall_dimensions": {"length": round(maximum[0] - minimum[0], 3),
                                "height": round(maximum[1] - minimum[1], 3),

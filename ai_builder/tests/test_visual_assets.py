@@ -31,6 +31,43 @@ class VisualAssetTests(unittest.TestCase):
                 for part in parts:
                     self.assertLess(max(part["positions"][1::3]), model["bounds"]["max"][1])
 
+    def test_all_three_vehicle_cabins_have_seated_driver_silhouette(self):
+        for kind in ("sedan", "suv", "bus"):
+            with self.subTest(kind=kind):
+                model = json.loads((STATIC_DIR / "models" / f"city-{kind}-v1.json").read_text())
+                batches = list(model["batches"].values())
+                driver = [batch for batch in batches if batch["component"] == "driver_silhouette"]
+                seats = [batch for batch in batches if batch["component"] == "seat"]
+                self.assertTrue(driver, f"{kind}: no driver outline")
+                self.assertTrue(seats, f"{kind}: no upholstered seats")
+                coords = [v for batch in driver for v in batch["positions"]]
+                self.assertLess(len(coords) // 9, 1500, "driver must stay cheap to render")
+                self.assertLess(max(coords[1::3]), model["bounds"]["max"][1])
+                self.assertLess(max(abs(x) for x in coords[0::3]), model["body_dimensions"]["length"] / 2)
+                self.assertLess(max(abs(z) for z in coords[2::3]), model["body_dimensions"]["width"] / 2)
+
+    def test_passenger_seats_are_below_dashboard_not_level_with_it(self):
+        for kind in ("sedan", "suv"):
+            with self.subTest(kind=kind):
+                model = json.loads((STATIC_DIR / "models" / f"city-{kind}-v1.json").read_text())
+                layout = model["interior_layout"]
+                cushions = [batch for batch in model["batches"].values()
+                            if batch["component"] == "seat_cushion"]
+                self.assertTrue(cushions)
+                cushion_top = max(y for batch in cushions for y in batch["positions"][1::3])
+                self.assertAlmostEqual(cushion_top, layout["cushion_top_height"], delta=.01)
+                self.assertLess(cushion_top + .25, layout["dashboard_top_height"])
+                self.assertLess(layout["floor_height"], cushion_top)
+                self.assertLess(layout["rear_seat_x"] + .8, layout["front_seat_x"])
+                self.assertLess(layout["front_seat_x"] + .4, layout["steering_wheel_x"])
+                self.assertLess(layout["steering_wheel_x"], layout["dashboard_x"])
+                self.assertLess(abs(layout["driver_head_x"] - layout["front_seat_x"]), .3)
+                rear_rest = [batch for batch in model["batches"].values()
+                             if batch["component"] == "rear_headrest"]
+                self.assertTrue(rear_rest)
+                rear_top = max(y for batch in rear_rest for y in batch["positions"][1::3])
+                self.assertLessEqual(rear_top, 1.21 if kind == "sedan" else 1.44)
+
     def setUp(self):
         class Handler(SceneHandler):
             state = SceneState()
@@ -136,6 +173,27 @@ class VisualAssetTests(unittest.TestCase):
                 plate_x = [x for batch in plates for x in batch["positions"][0::3]]
                 self.assertGreater(max(plate_x), half_length)
                 self.assertLess(min(plate_x), -half_length)
+
+    def test_passenger_wheel_arches_follow_both_axles_without_touching_tires(self):
+        for kind in ("sedan", "suv"):
+            with self.subTest(kind=kind):
+                model = json.loads(self.get(f"/assets/models/city-{kind}-v1.json")[2])
+                arches = [batch for batch in model["batches"].values()
+                          if batch["component"] == "wheel_arch"]
+                self.assertEqual(len(arches), 1)
+                positions = arches[0]["positions"]
+                self.assertEqual(len(positions) % 9, 0)
+                axle = model["body_dimensions"]["length"] * .305
+                wheel_z = model["wheel_centers"]["front_left"][1]
+                for axle_x in (-axle, axle):
+                    for side in (-1, 1):
+                        radii = [math.hypot(positions[i] - axle_x, positions[i + 1] - wheel_z)
+                                 for i in range(0, len(positions), 3)
+                                 if abs(positions[i] - axle_x) < model["wheel_radius"] + .14
+                                 and side * positions[i + 2] > 0]
+                        self.assertTrue(radii, f"{kind}: missing arch on {axle_x}/{side}")
+                        self.assertGreaterEqual(min(radii), model["wheel_radius"] + .05)
+                self.assertLess(len(positions) // 9, 500, "arch detail must stay lightweight")
 
     def test_passenger_tires_have_open_hubs_and_concentric_axles(self):
         for kind in ("sedan", "suv"):

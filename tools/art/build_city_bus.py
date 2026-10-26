@@ -36,6 +36,9 @@ paint = material("Pearl ivory enamel", (.81,.84,.79), .32,.25)
 teal = material("Petrol green enamel", (.018,.22,.23), .4,.24)
 glass = material("Smoked blue glazing", (.028,.075,.10), .58,.14, opacity=.42)
 seat_fabric = material("Charcoal passenger upholstery", (.055,.070,.075), .05,.68)
+seat_insert = material("Woven charcoal seat insert", (.12,.14,.14), .02,.84)
+driver_cloth = material("Unbranded driver silhouette jacket", (.072,.10,.12), 0,.87)
+driver_head = material("Unbranded driver silhouette head", (.34,.27,.21), 0,.86)
 seat_trim = material("Seat rail aluminium", (.26,.29,.30), .65,.30)
 rubber = material("Tire rubber", (.012,.017,.019), 0,.84)
 metal = material("Brushed aluminium", (.43,.48,.50), .82,.25)
@@ -57,6 +60,16 @@ def cube(name, loc, size, mat, bevel=0):
         bpy.ops.object.modifier_apply(modifier=mod.name)
         mod=obj.modifiers.new("Weighted corner normals", "WEIGHTED_NORMAL")
         bpy.ops.object.modifier_apply(modifier=mod.name)
+    return obj
+
+def ellipsoid(name, loc, size, mat):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=1, location=loc)
+    obj=bpy.context.object; obj.name=name
+    obj.scale=tuple(axis/2 for axis in size)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    obj.data.materials.append(mat)
+    for face in obj.data.polygons: face.use_smooth=True
+    obj["transit_component"]="driver_silhouette"
     return obj
 
 cube("Low floor body", (0,0,1.15), (9.4,2.48,1.28), paint,.18)
@@ -149,10 +162,23 @@ for x in [-2.85,-1.65,-.45,.75,1.95]:
         base["transit_component"]="seat"
         back=cube("Passenger seat back",(x-.12,y,1.36),(.18,.46,.58),seat_fabric,.06)
         back["transit_component"]="seat"
+        insert=cube("Passenger seat back insert",(x-.016,y,1.38),(.025,.30,.38),seat_insert,0)
+        insert["transit_component"]="seat"
+        headrest=cube("Passenger seat headrest",(x-.16,y,1.72),(.20,.28,.16),seat_fabric,0)
+        headrest["transit_component"]="seat"
         rail=cube("Passenger seat rail",(x+.12,y, .94),(.64,.04,.06),seat_trim,.01)
         rail["transit_component"]="seat"
-driver_base=cube("Driver seat",(3.30,.48,1.18),(.54,.52,.35),seat_fabric,.07)
+driver_base=cube("Driver seat",(3.30,.48,1.01),(.54,.52,.20),seat_fabric,.07)
 driver_base["transit_component"]="seat"
+driver_back=cube("Driver seat back",(3.06,.48,1.48),(.19,.48,.62),seat_fabric,0)
+driver_back["transit_component"]="seat"
+driver_rest=cube("Driver seat headrest",(3.02,.48,1.86),(.20,.27,.17),seat_fabric,0)
+driver_rest["transit_component"]="seat"
+ellipsoid("Bus driver jacket",(3.42,.48,1.62),(.34,.39,.53),driver_cloth)
+ellipsoid("Bus driver head",(3.51,.48,2.08),(.20,.18,.23),driver_head)
+for arm_side in (-1,1):
+    arm=cube("Bus driver forearm",(3.73,.48+arm_side*.15,1.65),(.42,.075,.075),driver_cloth,0)
+    arm["transit_component"]="driver_silhouette"
 cube("Driver console",(3.83,.28,1.18),(.34,.72,.28),black,.04)
 
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT/"city-bus-v1.blend"))

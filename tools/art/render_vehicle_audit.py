@@ -1,8 +1,10 @@
-"""Render a repeatable close-up audit image for the two passenger assets.
+"""Render a repeatable close-up audit image for the three vehicle assets.
 
 Usage:
   blender --background --python tools/art/render_vehicle_audit.py -- sedan
   blender --background --python tools/art/render_vehicle_audit.py -- suv
+  blender --background --python tools/art/render_vehicle_audit.py -- bus
+  blender --background --python tools/art/render_vehicle_audit.py -- sedan side
 
 This is an inspection tool only; it does not alter the browser asset format.
 """
@@ -34,7 +36,7 @@ def material(name, color, metallic=0.0, roughness=.45):
     return value
 
 
-def render(kind):
+def render(kind, view="three-quarter"):
     filepath = MODELS / f"city-{kind}-v1.blend"
     bpy.ops.wm.open_mainfile(filepath=str(filepath))
     scene = bpy.context.scene
@@ -44,7 +46,8 @@ def render(kind):
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
     scene.render.film_transparent = False
-    scene.render.filepath = str(OUTPUT / f"vehicle-{kind}-realism-audit.png")
+    suffix = "-side" if view == "side" else ""
+    scene.render.filepath = str(OUTPUT / f"vehicle-{kind}{suffix}-realism-audit.png")
     scene.world.color = (0.018, 0.024, 0.030)
 
     ground_material = material("Audit asphalt", (0.035, 0.045, 0.052), 0.05, .62)
@@ -70,11 +73,13 @@ def render(kind):
     rim.data.size = 3.0
     look_at(rim, (0, 0, 1.0))
 
-    bpy.ops.object.camera_add(location=(7.2, -7.0, 4.1))
+    camera_position = ((0, -16, 3.3) if kind == "bus" else (0, -8, 2.2)) if view == "side" else (
+        (13.2, -13.0, 7.1) if kind == "bus" else (7.2, -7.0, 4.1))
+    bpy.ops.object.camera_add(location=camera_position)
     camera = bpy.context.object
     camera.data.lens = 54
     camera.data.sensor_width = 36
-    look_at(camera, (0, 0, .86))
+    look_at(camera, (0, 0, 1.55 if kind == "bus" else .86))
     scene.camera = camera
 
     bpy.ops.render.render(write_still=True)
@@ -82,4 +87,5 @@ def render(kind):
 
 
 args = [arg for arg in sys.argv[sys.argv.index("--") + 1:] if arg] if "--" in sys.argv else []
-render(args[0] if args and args[0] in {"sedan", "suv"} else "sedan")
+render(args[0] if args and args[0] in {"sedan", "suv", "bus"} else "sedan",
+       "side" if len(args) > 1 and args[1] == "side" else "three-quarter")

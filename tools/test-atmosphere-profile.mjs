@@ -91,6 +91,7 @@ test('named cameras have immutable finite metre-scale poses', () => {
   }
   assert.ok(CAMERA_PROFILES.street.radius > 40);
   assert.ok(CAMERA_PROFILES.traffic.radius < CAMERA_PROFILES.street.radius);
+  assert.ok(CAMERA_PROFILES.traffic.phi < 1.1, 'follow camera must stay above the signal gantry');
   assert.deepEqual(CAMERA_PROFILES.traffic.target,[0,1.8,-2]);
 });
 
