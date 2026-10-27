@@ -20,3 +20,8 @@ The browser close-up is an inspectable real-time game-style prototype, not a sca
 The sedan and SUV now each have four Blender-authored, non-rotating wheel-arch flares swept around the actual cut wheel openings. The sweep tracks the body section's varying shoulder width rather than placing a constant-width torus beside it. Sedan arches use body paint; SUV arches use restrained dark cladding. Their near edge remains at least 0.05 m beyond the tyre radius. The geometry is exported in the same `.blend`, `.glb`, and batched browser `.json` source pipeline, with a regression check for both axles/sides and a lightweight triangle bound.
 
 The original follow-camera azimuth put a foreground signal head directly across much of the vehicle view. Its new three-quarter azimuth and higher elevation cleared that gantry in one sampled local browser scene. A later observation still found foreground signal heads at other vehicle positions, so occlusion is **not solved**. A manual orbit in the local browser produced a useful lower seat-inspection angle, but a robust future camera would need collision/occlusion-aware positioning. The camera is read-only and cannot change traffic decisions. Browser screenshots and audit renders are local evidence in `output/playwright/` and `.playwright-cli/`; neither proves universal visibility or photorealism.
+
+Subsequent follow-up: [foreground composition v0.1](follow-camera-occlusion-v0.1.md)
+adds authored obstruction proxies, alternate view selection, and follow-only
+foreground signal-head culling. Sampled browser frames are clearer, but this
+is not a guarantee that every route or manually chosen angle is unobstructed.

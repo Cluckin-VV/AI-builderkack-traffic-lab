@@ -391,6 +391,10 @@ function createBuildings(scene, world) {
   const specs=[[-49,-32,17,22,15],[-29,-32,15,29,15],[29,-32,15,24,15],[49,-32,17,33,16],[-49,32,17,21,15],[-29,32,15,27,15],[29,32,15,23,15],[49,32,17,30,16]];
   const names=["ATELIER  08","NORTH & CO.","COMMON GROUND","NEXUS  HOUSE","STUDIO 31","THE CORNER","CITY ARCHIVE","GALLERY"];
   specs.forEach(([x,z,w,h,d],index)=>{
+    // Keep a tiny camera proxy from the authored building dimensions. The
+    // actual facade meshes are batched later and are unsuitable for a cheap
+    // per-frame visibility query.
+    world.cameraOccluders?.push({min:[x-w/2,0,z-d/2],max:[x+w/2,h+2,z+d/2]});
     const group=new THREE.Group();group.position.set(x,0,z);scene.add(group);
     const facade=new THREE.MeshStandardMaterial({color:[0xe8e0d1,0xb1bfc5,0xd4bc9d,0xc8cbc5][index%4],
       map:cladding,bumpMap:cladding,bumpScale:.025,roughness:.78,metalness:.04});

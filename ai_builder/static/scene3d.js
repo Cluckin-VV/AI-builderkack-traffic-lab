@@ -5,7 +5,7 @@ const { createAtmosphere, createCity, createBusStopDistrict, batchStaticCity, lo
 );
 const { TrafficController, MAX_VEHICLES } = await import(new URL("./traffic-controller.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { WeatherView } = await import(new URL("./weather-view.js" + new URL(import.meta.url).search, import.meta.url).href);
-const { qualityProfile, CAMERA_PROFILES, selectCameraVehicle } = await import(new URL("./atmosphere-profile.mjs" + new URL(import.meta.url).search, import.meta.url).href);
+const { qualityProfile, CAMERA_PROFILES, selectCameraVehicle, chooseVisibleVehicleCamera, cameraBoxOverlapsVehicle } = await import(new URL("./atmosphere-profile.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { turnSignalState } = await import(new URL("./vehicle-signals.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { rainSprayState, wiperSweepState } = await import(new URL("./vehicle-weather-effects.mjs" + new URL(import.meta.url).search, import.meta.url).href);
 const { vehiclePaintColor } = await import(new URL("./vehicle-paint.mjs" + new URL(import.meta.url).search, import.meta.url).href);
@@ -124,6 +124,9 @@ export class TransitWorld {
     this.layoutDefinitions = layoutDefinitions;
     this.cameraMode = 'bird';
     this.cameraVehicleId = null;
+    this.cameraOccluders = [];
+    this.cameraUserAdjusted = false;
+    this.lastCameraVisibilityCheck = 0;
     this.lastTrafficSnapshot = null;
     this.districts = new Map();
 
@@ -221,6 +224,7 @@ export class TransitWorld {
     this.scene.add(group);
 
     const axis = definition.axis;
+    const cameraObstacles = [pole, arm];
     for (const [movement, lane] of [["left", "left"], ["straight", "straight"], ["right", "right"]]) {
       const targetLateral = offsets[lane];
       const targetAlong = junction.stop_line_s + 1.5;
@@ -232,6 +236,7 @@ export class TransitWorld {
       const housing = box(0.96, 2.75, 0.68, 0x101918, { metalness: 0.25, roughness: 0.55 });
       housing.position.y = 6.38;
       head.add(housing);
+      cameraObstacles.push(housing);
       const badge = createSignalBadge(movement);
       head.add(badge.panel);
       const lamps = {};
@@ -253,10 +258,18 @@ export class TransitWorld {
         visor.position.set(0, y + 0.27, 0.33);
         head.add(visor);
       }
-      const record = { group, head, lamps, badge, axis, approach, movement, groupKey: `${axis}_${movement === "left" ? "LEFT" : "THROUGH"}` };
+      const record = { group, head, housing, lamps, badge, axis, approach, movement, groupKey: `${axis}_${movement === "left" ? "LEFT" : "THROUGH"}` };
       this.signalGroups[axis].push(record);
       this.signalHeads.push(record);
       this.setSignalHead(record, "红灯");
+    }
+    group.updateMatrixWorld(true);
+    for (const object of cameraObstacles) {
+      const bounds = new THREE.Box3().setFromObject(object);
+      const box = {min:bounds.min.toArray(),max:bounds.max.toArray()};
+      this.cameraOccluders.push(box);
+      const owner = this.signalHeads.find(signal => signal.group === group && signal.housing === object);
+      if (owner) owner.cameraBounds = box;
     }
   }
 
@@ -433,12 +446,18 @@ export class TransitWorld {
       rendered.group.scale.setScalar(nextScale);
     });
     if (this.cameraMode === 'traffic') {
+      const previousFocus = this.cameraVehicleId;
       const focus = selectCameraVehicle(snapshot.vehicles, this.cameraVehicleId);
       this.cameraVehicleId = focus?.id ?? null;
       this.container.dataset.cameraFocus = this.cameraVehicleId ?? '';
       const destination = focus ? new THREE.Vector3(focus.x, 1.4, focus.z)
         : new THREE.Vector3(...CAMERA_PROFILES.traffic.target);
       this.target.lerp(destination, deltaSeconds > 0 ? 1 - Math.exp(-deltaSeconds * 5) : 1);
+      const now = performance.now();
+      if (focus && !this.cameraUserAdjusted && (previousFocus !== this.cameraVehicleId || now - this.lastCameraVisibilityCheck > 800)) {
+        this.ensureVisibleCamera();
+        this.lastCameraVisibilityCheck = now;
+      }
       this.updateCamera();
     }
     const now = performance.now();
@@ -470,6 +489,7 @@ export class TransitWorld {
       this.pointer.y = event.clientY;
       this.spherical.theta -= dx * 0.006;
       this.spherical.phi = THREE.MathUtils.clamp(this.spherical.phi + dy * 0.005, 0.4, 1.42);
+      this.cameraUserAdjusted = true;
       this.updateCamera();
     });
     const release = (event) => {
@@ -484,6 +504,7 @@ export class TransitWorld {
       event.preventDefault();
       this.spherical.radius = THREE.MathUtils.clamp(this.spherical.radius + event.deltaY * 0.035,
         this.cameraMode === 'traffic' ? 8 : 18, this.activeLayout==='bus_stop'?110:72);
+      this.cameraUserAdjusted = true;
       this.updateCamera();
     }, { passive: false });
     canvas.style.cursor = "grab";
@@ -496,6 +517,7 @@ export class TransitWorld {
       else if (event.key === "ArrowDown") this.spherical.phi = Math.min(1.42, this.spherical.phi + step);
       else return;
       event.preventDefault();
+      this.cameraUserAdjusted = true;
       this.updateCamera();
     });
   }
@@ -508,9 +530,41 @@ export class TransitWorld {
       this.target.z + radius * Math.sin(phi) * Math.sin(theta),
     );
     this.camera.lookAt(this.target);
+    this.updateFollowSignalVisibility();
+  }
+
+  updateFollowSignalVisibility() {
+    if (!this.signalHeads?.length) return;
+    const following = this.cameraMode === 'traffic' && Boolean(this.cameraVehicleId);
+    const from = this.camera.position.toArray();
+    const target = this.target.toArray();
+    let hidden = 0;
+    for (const signal of this.signalHeads) {
+      // Only near-camera heads covering the central observation frame are
+      // culled; other camera modes always display every authored lamp.
+      const covered = following && signal.cameraBounds
+        && cameraBoxOverlapsVehicle(from, target, signal.cameraBounds, this.camera.aspect, .82, .68);
+      signal.head.visible = !covered;
+      if (covered) hidden += 1;
+    }
+    this.container.dataset.cameraForegroundSignalsHidden = String(hidden);
+  }
+
+  ensureVisibleCamera() {
+    const target = this.target.toArray();
+    const obstacles = this.activeLayout === 'crossroads' ? this.cameraOccluders : [];
+    const current = chooseVisibleVehicleCamera(target, this.spherical, obstacles, false, this.camera.aspect);
+    if (current.clear) {
+      this.container.dataset.cameraSightline = 'clear';
+      return;
+    }
+    const candidate = chooseVisibleVehicleCamera(target, CAMERA_PROFILES.traffic, obstacles, true, this.camera.aspect);
+    if (candidate.blockedSamples < current.blockedSamples) this.spherical = candidate.pose;
+    this.container.dataset.cameraSightline = candidate.clear ? 'clear' : 'limited';
   }
 
   resetCamera() {
+    this.cameraUserAdjusted = false;
     const profile = CAMERA_PROFILES[this.cameraMode] ?? DEFAULT_CAMERA;
     this.spherical = { ...(this.cameraMode === 'bird' ? this.layoutCamera ?? profile : profile) };
     const focus = this.cameraMode === 'traffic'
@@ -518,6 +572,7 @@ export class TransitWorld {
     this.cameraVehicleId = focus?.id ?? null;
     this.container.dataset.cameraFocus = this.cameraVehicleId ?? '';
     this.target.set(...(focus ? [focus.x, 1.4, focus.z] : profile.target));
+    if (focus) this.ensureVisibleCamera();
     this.updateCamera();
     this.container.dataset.cameraMode = this.cameraMode;
   }

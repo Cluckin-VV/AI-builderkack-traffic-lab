@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, selectCameraVehicle, architecturalLightLevel, vehicleHeadlampLevel, vehicleFinishProfile } from '../ai_builder/static/atmosphere-profile.mjs';
+import { AtmosphereTransition, LightingTransition, SurfaceWetness, lightingFogBrightness, qualityProfile, CAMERA_PROFILES, selectCameraVehicle, cameraSegmentIntersectsBox, cameraBoxOverlapsVehicle, chooseVisibleVehicleCamera, architecturalLightLevel, vehicleHeadlampLevel, vehicleFinishProfile } from '../ai_builder/static/atmosphere-profile.mjs';
 
 test('weather changes blend rather than jumping on confirmation', () => {
   const blend = new AtmosphereTransition();
@@ -109,6 +109,38 @@ test('vehicle camera keeps a stable target and ignores distant or malformed vehi
   assert.equal(selectCameraVehicle([{id:'far',type:'sedan',x:90,z:0}]),null);
   assert.equal(selectCameraVehicle(null),null);
   assert.equal(vehicles.length,5);
+});
+
+test('follow camera avoids an authored foreground signal without changing its target', () => {
+  const target = [0, 1.4, 0];
+  const signal = { min: [4, 0, 1], max: [6, 9, 3] };
+  const pose = { radius: 14, theta: .35, phi: .93 };
+  assert.equal(chooseVisibleVehicleCamera(target, pose, [signal], false).clear, false);
+  const found = chooseVisibleVehicleCamera(target, pose, [signal]);
+  assert.equal(found.clear, true);
+  assert.notEqual(found.pose.theta, pose.theta);
+  assert.equal(found.pose.radius, pose.radius);
+  assert.deepEqual(target, [0, 1.4, 0]);
+  assert.deepEqual(pose, { radius: 14, theta: .35, phi: .93 });
+});
+
+test('follow camera retains a clear view and explicitly reports a fully blocked view', () => {
+  const pose = { radius: 14, theta: .62, phi: .93 };
+  assert.deepEqual(chooseVisibleVehicleCamera([0, 1.4, 0], pose, []).pose, pose);
+  const enclosing = { min: [-20, 0, -20], max: [20, 20, 20] };
+  const blocked = chooseVisibleVehicleCamera([0, 1.4, 0], pose, [enclosing]);
+  assert.equal(blocked.clear, false);
+  assert.equal(blocked.pose.radius, pose.radius);
+  assert.ok(blocked.blockedSamples > 0);
+  assert.equal(cameraSegmentIntersectsBox([0, 1, 0], [10, 1, 0], {min:[4, 0, -1],max:[5,2,1]}), true);
+  assert.equal(cameraSegmentIntersectsBox([0, 1, 0], [10, 1, 0], {min:[4, 0, 2],max:[5,2,3]}), false);
+});
+
+test('only foreground signal boxes overlapping the follow composition are culled', () => {
+  const camera = [0, 10, 12], target = [0, 1.4, 0];
+  assert.equal(cameraBoxOverlapsVehicle(camera, target, {min:[-.5, 5, 5],max:[.5, 8, 6]}, 1.2, .82, .68), true);
+  assert.equal(cameraBoxOverlapsVehicle(camera, target, {min:[20, 5, 5],max:[21, 8, 6]}, 1.2, .82, .68), false);
+  assert.equal(cameraBoxOverlapsVehicle(camera, target, {min:[-.5, 5, -8],max:[.5, 8, -7]}, 1.2, .82, .68), false);
 });
 
 test('lighting changes start at the current appearance and converge without a jump', () => {

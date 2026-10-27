@@ -41,6 +41,80 @@ export function selectCameraVehicle(vehicles, previousId = null, maxDistance = 4
   return inView[0] ?? null;
 }
 
+// A bounded, presentation-only line-of-sight check. Occluders are the authored
+// building/signal bounds, not traffic geometry or mutable scene state.
+export function cameraSegmentIntersectsBox(from, to, box) {
+  if (![...from, ...to, ...box.min, ...box.max].every(Number.isFinite)) return false;
+  let entry = 0, exit = 1;
+  for (let axis = 0; axis < 3; axis += 1) {
+    const delta = to[axis] - from[axis];
+    if (Math.abs(delta) < 1e-8) {
+      if (from[axis] < box.min[axis] || from[axis] > box.max[axis]) return false;
+      continue;
+    }
+    let near = (box.min[axis] - from[axis]) / delta;
+    let far = (box.max[axis] - from[axis]) / delta;
+    if (near > far) [near, far] = [far, near];
+    entry = Math.max(entry, near);
+    exit = Math.min(exit, far);
+    if (entry > exit) return false;
+  }
+  return entry < .97 && exit > .03;
+}
+
+export function cameraBoxOverlapsVehicle(from, target, box, aspect = 1.2, halfWidth = .28, halfHeight = .3) {
+  const direction = target.map((value, index) => value - from[index]);
+  const distance = Math.hypot(...direction);
+  if (distance < 1) return false;
+  const forward = direction.map(value => value / distance);
+  const horizontal = Math.hypot(forward[0], forward[2]);
+  if (horizontal < 1e-5) return false;
+  const right = [-forward[2] / horizontal, 0, forward[0] / horizontal];
+  const up = [right[1] * forward[2] - right[2] * forward[1],
+    right[2] * forward[0] - right[0] * forward[2],
+    right[0] * forward[1] - right[1] * forward[0]];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  let inFront = false;
+  for (const x of [box.min[0], box.max[0]]) for (const y of [box.min[1], box.max[1]]) for (const z of [box.min[2], box.max[2]]) {
+    const vector = [x - from[0], y - from[1], z - from[2]];
+    const depth = vector.reduce((sum, value, axis) => sum + value * forward[axis], 0);
+    if (depth <= .1 || depth >= distance - .2) continue;
+    inFront = true;
+    const horizontalScale = depth * Math.tan(Math.PI / 8) * Math.max(.5, aspect);
+    const verticalScale = depth * Math.tan(Math.PI / 8);
+    const screenX = vector.reduce((sum, value, axis) => sum + value * right[axis], 0) / horizontalScale;
+    const screenY = vector.reduce((sum, value, axis) => sum + value * up[axis], 0) / verticalScale;
+    minX = Math.min(minX, screenX); maxX = Math.max(maxX, screenX);
+    minY = Math.min(minY, screenY); maxY = Math.max(maxY, screenY);
+  }
+  return inFront && minX < halfWidth && maxX > -halfWidth && minY < halfHeight && maxY > -halfHeight;
+}
+
+export function chooseVisibleVehicleCamera(target, current, occluders = [], search = true, aspect = 1.2) {
+  const candidateAngles = search ? [0, -.45, .45, -.9, .9, -1.35, 1.35, Math.PI] : [0];
+  const candidateElevations = search ? [current.phi, Math.min(current.phi, .68)] : [current.phi];
+  let best = { pose: { ...current }, blockedSamples: Infinity };
+  for (const phi of candidateElevations) for (const offset of candidateAngles) {
+    const pose = { ...current, theta: current.theta + offset, phi };
+    const from = [
+      target[0] + pose.radius * Math.sin(phi) * Math.cos(pose.theta),
+      target[1] + pose.radius * Math.cos(phi),
+      target[2] + pose.radius * Math.sin(phi) * Math.sin(pose.theta),
+    ];
+    const lateral = [-Math.sin(pose.theta), 0, Math.cos(pose.theta)];
+    const samples = [target,
+      [target[0] + lateral[0] * 1.4, target[1] + .45, target[2] + lateral[2] * 1.4],
+      [target[0] - lateral[0] * 1.4, target[1] + .45, target[2] - lateral[2] * 1.4],
+      [target[0], target[1] + 1.3, target[2]],
+    ];
+    const blockedSamples = samples.filter(point => occluders.some(box => cameraSegmentIntersectsBox(from, point, box))).length
+      + occluders.filter(box => cameraBoxOverlapsVehicle(from, target, box, aspect)).length;
+    if (blockedSamples === 0) return { pose, clear: true, blockedSamples };
+    if (blockedSamples < best.blockedSamples) best = { pose, blockedSamples };
+  }
+  return { ...best, clear: false };
+}
+
 export function architecturalLightLevel(weatherLamp, style = 'daylight') {
   const lamp = Number.isFinite(weatherLamp) ? Math.max(0, Math.min(1, weatherLamp)) : 0;
   const dusk = style === 'blue' ? 1 : style === 'golden' ? .45 : 0;
