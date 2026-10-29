@@ -104,6 +104,7 @@ function restoreLiveScene() {
     ? lastScene.vehicles.length : Number(lastScene.bus_count ?? lastScene.buses ?? 0);
   document.querySelector("#vehicle-count-label").textContent = "车辆总数";
   document.querySelector("#bus-count").textContent = String(liveCount);
+  document.querySelector("#weather-state").textContent = weatherLabels[lastScene.weather] ?? lastScene.weather;
   world?.syncState(lastScene);
 }
 
@@ -510,6 +511,7 @@ function showPlanPreview(result) {
   sceneRoot.dataset.preview = "true";
   document.querySelector("#vehicle-count-label").textContent = "预演车辆";
   document.querySelector("#bus-count").textContent = String(total);
+  document.querySelector("#weather-state").textContent = weatherLabels[projected.weather] ?? projected.weather;
   resumeAutoSignalButton.disabled = true;
   world?.syncState(result.projected_scene ?? projected);
   window.__lastUndo = result.undo;

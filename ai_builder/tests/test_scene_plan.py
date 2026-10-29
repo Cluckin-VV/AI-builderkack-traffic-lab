@@ -1,5 +1,6 @@
 import unittest
 import json
+import re
 from pathlib import Path
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
@@ -16,6 +17,20 @@ from ai_builder.scene_plan import (
 
 
 class ScenePlanTests(unittest.TestCase):
+    def test_visible_prompt_example_previews_successfully(self):
+        index = (Path(__file__).resolve().parents[1] / "static" / "index.html").read_text(encoding="utf-8")
+        match = re.search(r'placeholder="例如：([^"]+)"', index)
+        self.assertIsNotNone(match, "the prompt must show a concrete example")
+
+        plan = DeterministicScenePlanner().generate_plan(match.group(1))
+        self.assertEqual(
+            [step["action_type"] for step in plan["actions"]],
+            ["add_vehicle", "add_vehicle", "set_weather"],
+        )
+        preview = preview_scene_plan(plan, SceneState())
+        self.assertEqual(preview["status"], "preview_ready")
+        self.assertEqual(preview["projected_state"]["weather"], "rain")
+
     def test_compound_prompt_produces_ordered_actions(self):
         plan = DeterministicScenePlanner().generate_plan(
             "让天气下雪，然后增加两辆公交车并把信号灯改成红色"
