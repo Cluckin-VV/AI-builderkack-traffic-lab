@@ -1,0 +1,35 @@
+1
+00:00:00,000 --> 00:00:09,000
+TransitLab v0.8: a live browser scene. Rule-based commands; real LLM is shadow-only.
+
+2
+00:00:10,000 --> 00:00:18,000
+Preview: add two SUVs and rain. The committed state on the right stays at 12 / clear.
+
+3
+00:00:18,000 --> 00:00:20,000
+Confirm the validated plan before any committed change.
+
+4
+00:00:20,000 --> 00:00:26,000
+Confirmed: three atomic actions commit together. The live scene is now 14 vehicles / rain.
+
+5
+00:00:26,000 --> 00:00:32,000
+Observe original Blender vehicles, wet-road shading and automatic traffic phases.
+
+6
+00:00:33,000 --> 00:00:41,000
+Undo also requires a preview and confirmation. The live state remains 14 / rain until then.
+
+7
+00:00:42,000 --> 00:00:49,000
+Undo confirmed: the original 12 vehicles and clear weather are restored.
+
+8
+00:00:50,000 --> 00:00:58,000
+Unsupported meteor weather is rejected at the candidate stage. No scene change.
+
+9
+00:00:58,000 --> 00:01:05,000
+Real public-browser capture at normal speed. Stylized prototype, not a realism benchmark.

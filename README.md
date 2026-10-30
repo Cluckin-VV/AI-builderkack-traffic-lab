@@ -92,10 +92,13 @@ implementation and verification evidence. The three Douyin reference clips
 were sampled where accessible, not watched in full; their evidence boundary is
 recorded [here](docs/douyin-reference-review-v0.1.md).
 
-The [2:12 English-captioned video](https://github.com/Cluckin-VV/AI-builderkack-traffic-lab/releases/download/v0.5.0-rc.1/transitlab-v05-demo-final.mp4)
-documents the **older v0.5** release. It does **not** show the current v0.8
-mixed-fleet scene or revised workflow and should not be presented as current
-footage. A new under-three-minute demonstration is needed for a final entry.
+The current [1:05 English-captioned v0.8 walkthrough](https://github.com/Cluckin-VV/AI-builderkack-traffic-lab/releases/download/v0.8.0-demo.1/transitlab-v08-demo-en.mp4)
+shows public-browser preview, confirmation, rain, vehicle follow, undo and
+unsupported-command rejection. It captures commit `b29bfb3`, fingerprint
+`c5f00237fa53`, at normal speed; rules mode and shadow-only LLM are disclosed.
+[Capture details and limitations](docs/demo-video-capture-v0.8.md) include the
+artifact hash and verification. The [older v0.5 video](https://github.com/Cluckin-VV/AI-builderkack-traffic-lab/releases/download/v0.5.0-rc.1/transitlab-v05-demo-final.mp4)
+is retained only as historical evidence, not current footage.
 
 Known operational limits: scene state and Event Log are process-local and reset
 on restart; visitors to one instance share the current scene; a free Render
